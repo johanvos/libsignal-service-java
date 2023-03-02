@@ -1,11 +1,14 @@
 package tokhttp3;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import static java.net.http.HttpRequest.BodyPublishers.noBody;
+import java.net.http.HttpResponse;
 import java.util.HexFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -61,6 +64,7 @@ public class Request {
 
         public Request build() {
             String origHost = this.origUri.getHost();
+            System.err.println("WAVEPROP = "+System.getProperty("wave.ech")+" and host = "+origHost);
             if (System.getProperty("wave.ech", "false").equalsIgnoreCase("true")) {
                 if (origHost.equals("chat.gluonhq.net")) {
                     builder.header("innerSNI", "chat.gluonhq.net");
@@ -141,8 +145,39 @@ public class Request {
         return answer; 
     }
 
+    public static String getSvbFromDNS()  {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .build();
+            String outer = "cloudflare-ech.com";
+            String hidden = "signal7.gluonhq.net";
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://1.1.1.1/dns-query?name=crypto.cloudflare.com&type=65"))
+                    .header("accept", "application/dns-json")
+                    .GET()
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            String r1 = response.body();
+            LOG.info("HTTPS RR = "+r1);
+
+            int i1 = r1.indexOf("\"Answer\"");
+            String r2 = r1.substring(i1);
+
+            int i2 = r2.indexOf("\"data\"");
+            String r3 = r2.substring(i2).replaceAll(" ", "").toUpperCase();
+            LOG.info("svb = "+r3);
+
+            return r3;
+        } catch (IOException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+        }
+        return "";
+    }
+
     public static String getEchString() throws Exception {
-        String echString = getSvb();
+        String echString = getSvbFromDNS();
         int s1 = echString.indexOf("FE0D");
         int start = s1 - 4; // first 4 octects length
         int len = 2 + HexFormat.fromHexDigits(echString, start, s1);
