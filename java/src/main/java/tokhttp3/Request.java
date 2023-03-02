@@ -10,6 +10,7 @@ import java.net.http.HttpRequest;
 import static java.net.http.HttpRequest.BodyPublishers.noBody;
 import java.net.http.HttpResponse;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,16 +21,28 @@ public class Request {
     private URI origUri;
 
     private static final Logger LOG = Logger.getLogger(Request.class.getName());
+    static final long SVB_LIFE = 1000 * 60 * 30; // 30 minutes
+    static long lastSvb = 0l;
     static String echString;
 
     static {
         try {
-            echString = getEchString();
+            echString = getEchString().orElse("");
         } catch (Exception ex) {
             ex.printStackTrace();
             Logger.getLogger(MyCall.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+
+    static void checkEch() {
+        if ((System.currentTimeMillis() - lastSvb) > SVB_LIFE) {
+            LOG.info("We need to get a new ECHConfig");
+            getEchString().ifPresent(eh -> {
+                echString = eh;
+            });
+        }
+    }
+
     Request(HttpRequest httpRequest, boolean ws, URI origUri) {
         this.httpRequest = httpRequest;
         this.ws = ws;
@@ -129,8 +142,8 @@ public class Request {
             }
             return this;
         }
-
     }
+
     public static String getSvb() throws Exception {
         String cmd = "dig +short  -t TYPE65 crypto.cloudflare.com"; // mac
         if (System.getProperty("os.name").equalsIgnoreCase("linux")) {
@@ -176,12 +189,12 @@ public class Request {
         return "";
     }
 
-    public static String getEchString() throws Exception {
+    public static Optional<String> getEchString(){
         String echString = getSvbFromDNS();
         int s1 = echString.indexOf("FE0D");
         int start = s1 - 4; // first 4 octects length
         int len = 2 + HexFormat.fromHexDigits(echString, start, s1);
         String answer = echString.substring(start, start + 2 * len);
-        return answer;
+        return Optional.of(answer);
     }
 }
