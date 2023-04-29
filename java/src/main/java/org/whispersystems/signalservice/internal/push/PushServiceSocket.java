@@ -9,6 +9,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
+import io.privacyresearch.grpcproxy.SignalRpcReply;
+import io.privacyresearch.grpcproxy.client.TunnelClient;
 
 import org.signal.storageservice.protos.groups.AvatarUploadAttributes;
 import org.signal.storageservice.protos.groups.Group;
@@ -115,6 +117,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -295,6 +298,7 @@ public class PushServiceSocket {
     private final SecureRandom random;
     private final ClientZkProfileOperations clientZkProfileOperations;
     private final boolean automaticNetworkRetry;
+    private TunnelClient tc;
 
     private static final Logger LOG = Logger.getLogger(PushServiceSocket.class.getName());
 
@@ -313,6 +317,11 @@ public class PushServiceSocket {
         this.storageClients = createConnectionHolders(configuration.getSignalStorageUrls(), configuration.getNetworkInterceptors(), configuration.getDns(), configuration.getSignalProxy());
         this.random = new SecureRandom();
         this.clientZkProfileOperations = clientZkProfileOperations;
+        try {
+            this.tc = new TunnelClient();
+        } catch (IOException ex) {
+            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public void requestSmsVerificationCode(boolean androidSmsRetriever, Optional<String> captchaToken, Optional<String> challenge) throws IOException {
@@ -561,7 +570,7 @@ public class PushServiceSocket {
     public SignalServiceMessagesResult getMessages(boolean allowStories) throws IOException {
         Map<String, String> headers = Collections.singletonMap("X-Signal-Receive-Stories", allowStories ? "true" : "false");
 
-        try ( Response response = makeServiceRequest(String.format(MESSAGE_PATH, ""), "GET", (RequestBody) null, headers, NO_HANDLER, Optional.empty())) {
+        try ( Response response = makeServiceRequest(String.format(MESSAGE_PATH, ""), "GET", (RequestBody) null, headers, NO_HANDLER, Optional.empty(), null)) {
             validateServiceResponse(response);
 
             List<SignalServiceEnvelopeEntity> envelopes = readBodyJson(response.body(), SignalServiceEnvelopeEntityList.class).getMessages();
@@ -1579,58 +1588,6 @@ public class PushServiceSocket {
                 .encodedFragment(resumableHttpUrl.encodedFragment())
                 .build();
     }
-//
-//    private String OLDmakeServiceRequest(String urlFragment, String method, String jsonBody, Map<String, String> headers, ResponseCodeHandler responseCodeHandler, Optional<UnidentifiedAccess> unidentifiedAccessKey)
-//            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-//        LOG.fine("need to create request for jsonbody = " + jsonBody);
-//        ResponseBody responseBody = makeServiceBodyRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, responseCodeHandler, unidentifiedAccessKey);
-//        try {
-//            return responseBody.string();
-//        } catch (IOException e) {
-//            LOG.log(Level.SEVERE, "Error " + responseBody, e);
-//            System.err.println("with urlF = " + urlFragment + ", method = " + method + ", body = " + jsonBody);
-//            throw new PushNetworkException(e);
-//        }
-//    }
-//
-//    private ListenableFuture<String> submitServiceRequest(String urlFragment, String method, String jsonBody, Map<String, String> headers, Optional<UnidentifiedAccess> unidentifiedAccessKey) {
-//        OkHttpClient okHttpClient = buildOkHttpClient(unidentifiedAccessKey.isPresent());
-//        Call call = okHttpClient.newCall(buildServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, unidentifiedAccessKey));
-//
-//        synchronized (connections) {
-//            connections.add(call);
-//        }
-//
-//        SettableFuture<String> bodyFuture = new SettableFuture<>();
-//
-//        call.enqueue(new Callback() {
-//            @Override
-//            public void onResponse(Call call, Response response) {
-//                try (ResponseBody body = validateServiceResponse(response).body()) {
-//                    bodyFuture.set(readBodyString(body));
-//                } catch (IOException e) {
-//                    bodyFuture.setException(e);
-//                }
-//            }
-//
-//            @Override
-//            public void onFailure(Call call, IOException e) {
-//                bodyFuture.setException(e);
-//            }
-//        });
-//
-//        return bodyFuture;
-//    }
-//
-//    private ResponseBody makeServiceBodyRequest(String urlFragment,
-//            String method,
-//            RequestBody body,
-//            Map<String, String> headers,
-//            ResponseCodeHandler responseCodeHandler,
-//            Optional<UnidentifiedAccess> unidentifiedAccessKey)
-//            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-//        return makeServiceRequest(urlFragment, method, body, headers, responseCodeHandler, unidentifiedAccessKey).body();
-//    }
 
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
@@ -1649,7 +1606,7 @@ public class PushServiceSocket {
 
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody, Map<String, String> headers, ResponseCodeHandler responseCodeHandler)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-        ResponseBody responseBody = makeServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, responseCodeHandler, Optional.empty(), true).body();
+        ResponseBody responseBody = makeServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, responseCodeHandler, Optional.empty(), true, jsonBody).body();
         try {
             return responseBody.string();
         } catch (IOException e) {
@@ -1681,7 +1638,7 @@ public class PushServiceSocket {
             Map<String, String> headers, ResponseCodeHandler responseCodeHandler,
             Optional<UnidentifiedAccess> unidentifiedAccessKey)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-        ResponseBody responseBody = makeServiceBodyRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, responseCodeHandler, unidentifiedAccessKey);
+        ResponseBody responseBody = makeServiceBodyRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, responseCodeHandler, unidentifiedAccessKey, jsonBody);
         try {
             return responseBody.string();
         } catch (IOException e) {
@@ -1740,19 +1697,10 @@ public class PushServiceSocket {
             RequestBody body,
             Map<String, String> headers,
             ResponseCodeHandler responseCodeHandler,
-            Optional<UnidentifiedAccess> unidentifiedAccessKey)
+            Optional<UnidentifiedAccess> unidentifiedAccessKey,
+            String rawBody)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-        return makeServiceRequest(urlFragment, method, body, headers, responseCodeHandler, unidentifiedAccessKey).body();
-    }
-
-    private Response makeServiceRequest(String urlFragment,
-            String method,
-            RequestBody body,
-            Map<String, String> headers,
-            ResponseCodeHandler responseCodeHandler,
-            Optional<UnidentifiedAccess> unidentifiedAccessKey)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-        return makeServiceRequest(urlFragment, method, body, headers, responseCodeHandler, unidentifiedAccessKey, false);
+        return makeServiceRequest(urlFragment, method, body, headers, responseCodeHandler, unidentifiedAccessKey, rawBody).body();
     }
 
     private Response makeServiceRequest(String urlFragment,
@@ -1761,9 +1709,21 @@ public class PushServiceSocket {
             Map<String, String> headers,
             ResponseCodeHandler responseCodeHandler,
             Optional<UnidentifiedAccess> unidentifiedAccessKey,
-            boolean doNotAddAuthenticationOrUnidentifiedAccessKey)
+            String rawBody)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-        Response response = getServiceConnection(urlFragment, method, body, headers, unidentifiedAccessKey, doNotAddAuthenticationOrUnidentifiedAccessKey);
+        return makeServiceRequest(urlFragment, method, body, headers, responseCodeHandler, unidentifiedAccessKey, false, rawBody);
+    }
+
+    private Response makeServiceRequest(String urlFragment,
+            String method,
+            RequestBody body,
+            Map<String, String> headers,
+            ResponseCodeHandler responseCodeHandler,
+            Optional<UnidentifiedAccess> unidentifiedAccessKey,
+            boolean doNotAddAuthenticationOrUnidentifiedAccessKey,
+            String rawBody)
+            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+        Response response = getServiceConnection(urlFragment, method, body, headers, unidentifiedAccessKey, doNotAddAuthenticationOrUnidentifiedAccessKey, rawBody);
         ResponseBody responseBody = response.body();
         try {
             responseCodeHandler.handle(response.code(), responseBody);
@@ -1840,17 +1800,52 @@ public class PushServiceSocket {
 
         return response;
     }
+    
+    TunnelClient getTunnelClient() {
+        if (this.tc == null) {
+            try {
+                this.tc = new TunnelClient();
+            } catch (IOException ex) {
+               LOG.log(Level.SEVERE, null, ex);
+            }
+        }
+        return this.tc;
+    }
 
+static int restCount = 0;
+static int grpcCount = 0;
     private Response getServiceConnection(String urlFragment,
             String method,
             RequestBody body,
             Map<String, String> headers,
             Optional<UnidentifiedAccess> unidentifiedAccess,
-            boolean doNotAddAuthenticationOrUnidentifiedAccessKey)
+            boolean doNotAddAuthenticationOrUnidentifiedAccessKey,
+            String rawBody)
             throws PushNetworkException {
         try {
             OkHttpClient okHttpClient = buildOkHttpClient(unidentifiedAccess.isPresent());
-            Call call = okHttpClient.newCall(buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey));
+            Request request = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
+//            System.err.println("[GRPC] urlFrag = "+urlFragment);
+//            System.err.println("[GRPC] uri = "+request.getUri());
+//            System.err.println("[GRPC] urlFrag = "+urlFragment);
+//            System.err.println("[GRPC] method = "+method);
+//            System.err.println("[GRPC] body = " + body);
+//            System.err.println("[GRPC] headers = "+request.getHttpRequest().headers());
+//            System.err.println("[GRPC] unidentifiedAccess = "+unidentifiedAccess);
+//            System.err.println("[GRPC] doNotAddAuthenticationOrUnidentifiedAccessKey = "+doNotAddAuthenticationOrUnidentifiedAccessKey);
+//            System.err.println("BP = " + (body == null ? "NULL" : body.getBodyPublisher().getClass()));
+
+            Map<String, List<String>> headerMap = request.getHttpRequest().headers().map();
+            if (rawBody == null) rawBody = "";
+            if (method.toLowerCase().equals("put")) {
+                SignalRpcReply reply = getTunnelClient().sendMessage(request.getUri().toString(), headerMap, rawBody);
+                grpcCount++;
+                LOG.info("#GPRC requests = "+grpcCount+", #REST requests = "+restCount);
+                return new Response(reply);
+            }
+            Call call = okHttpClient.newCall(request);
+            restCount++;
+            LOG.info("#GPRC requests = "+grpcCount+", #REST requests = "+restCount);
 
             synchronized (connections) {
                 connections.add(call);
