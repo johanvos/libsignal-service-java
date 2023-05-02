@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import io.privacyresearch.grpcproxy.SignalRpcReply;
+import io.privacyresearch.grpcproxy.client.GrpcConfig;
 import io.privacyresearch.grpcproxy.client.TunnelClient;
 
 import org.signal.storageservice.protos.groups.AvatarUploadAttributes;
@@ -317,11 +318,7 @@ public class PushServiceSocket {
         this.storageClients = createConnectionHolders(configuration.getSignalStorageUrls(), configuration.getNetworkInterceptors(), configuration.getDns(), configuration.getSignalProxy());
         this.random = new SecureRandom();
         this.clientZkProfileOperations = clientZkProfileOperations;
-        try {
-            this.tc = new TunnelClient();
-        } catch (IOException ex) {
-            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
-        }
+
     }
 
     public void requestSmsVerificationCode(boolean androidSmsRetriever, Optional<String> captchaToken, Optional<String> challenge) throws IOException {
@@ -1606,6 +1603,7 @@ public class PushServiceSocket {
 
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody, Map<String, String> headers, ResponseCodeHandler responseCodeHandler)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+        System.err.println("APP1");
         ResponseBody responseBody = makeServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, responseCodeHandler, Optional.empty(), true, jsonBody).body();
         try {
             return responseBody.string();
@@ -1663,6 +1661,13 @@ public class PushServiceSocket {
             String jsonBody,
             Map<String, String> headers,
             Optional<UnidentifiedAccess> unidentifiedAccessKey) {
+//        Request request = buildServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, unidentifiedAccessKey, false);
+//        Map<String, List<String>> headerMap = request.getHttpRequest().headers().map();
+//        if (jsonBody == null) jsonBody = "";
+//        SignalRpcReply reply = getTunnelClient().sendMessage(request.getUri().toString(), method, headerMap, jsonBody);
+//        return new Response(reply);
+        
+        
         OkHttpClient okHttpClient = buildOkHttpClient(unidentifiedAccessKey.isPresent());
         Call call = okHttpClient.newCall(buildServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, unidentifiedAccessKey, false));
 
@@ -1800,20 +1805,19 @@ public class PushServiceSocket {
 
         return response;
     }
-    
+
     TunnelClient getTunnelClient() {
         if (this.tc == null) {
+            GrpcConfig grpcConfig = new GrpcConfig().target("localhost:50051");
             try {
-                this.tc = new TunnelClient();
+                this.tc = new TunnelClient(grpcConfig);
             } catch (IOException ex) {
-               LOG.log(Level.SEVERE, null, ex);
+                Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         return this.tc;
     }
 
-static int restCount = 0;
-static int grpcCount = 0;
     private Response getServiceConnection(String urlFragment,
             String method,
             RequestBody body,
@@ -1822,45 +1826,11 @@ static int grpcCount = 0;
             boolean doNotAddAuthenticationOrUnidentifiedAccessKey,
             String rawBody)
             throws PushNetworkException {
-        try {
-            OkHttpClient okHttpClient = buildOkHttpClient(unidentifiedAccess.isPresent());
-            Request request = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
-//            System.err.println("[GRPC] urlFrag = "+urlFragment);
-//            System.err.println("[GRPC] uri = "+request.getUri());
-//            System.err.println("[GRPC] urlFrag = "+urlFragment);
-//            System.err.println("[GRPC] method = "+method);
-//            System.err.println("[GRPC] body = " + body);
-//            System.err.println("[GRPC] headers = "+request.getHttpRequest().headers());
-//            System.err.println("[GRPC] unidentifiedAccess = "+unidentifiedAccess);
-//            System.err.println("[GRPC] doNotAddAuthenticationOrUnidentifiedAccessKey = "+doNotAddAuthenticationOrUnidentifiedAccessKey);
-//            System.err.println("BP = " + (body == null ? "NULL" : body.getBodyPublisher().getClass()));
-
-            Map<String, List<String>> headerMap = request.getHttpRequest().headers().map();
-            if (rawBody == null) rawBody = "";
-            if (method.toLowerCase().equals("put")) {
-                SignalRpcReply reply = getTunnelClient().sendMessage(request.getUri().toString(), headerMap, rawBody);
-                grpcCount++;
-                LOG.info("#GPRC requests = "+grpcCount+", #REST requests = "+restCount);
-                return new Response(reply);
-            }
-            Call call = okHttpClient.newCall(request);
-            restCount++;
-            LOG.info("#GPRC requests = "+grpcCount+", #REST requests = "+restCount);
-
-            synchronized (connections) {
-                connections.add(call);
-            }
-
-            try {
-                return call.execute();
-            } finally {
-                synchronized (connections) {
-                    connections.remove(call);
-                }
-            }
-        } catch (IOException e) {
-            throw new PushNetworkException(e);
-        }
+        Request request = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
+        Map<String, List<String>> headerMap = request.getHttpRequest().headers().map();
+        if (rawBody == null) rawBody = "";
+        SignalRpcReply reply = getTunnelClient().sendMessage(request.getUri().toString(), method, headerMap, rawBody);
+        return new Response(reply);
     }
 
     private OkHttpClient buildOkHttpClient(boolean unidentified) {
