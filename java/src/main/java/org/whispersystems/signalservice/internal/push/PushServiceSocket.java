@@ -144,6 +144,7 @@ import javax.net.SocketFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import org.signal.libsignal.internal.Native;
 
 import tokhttp3.Call;
 import tokhttp3.Callback;
@@ -1808,7 +1809,7 @@ public class PushServiceSocket {
 
     TunnelClient getTunnelClient() {
         if (this.tc == null) {
-            GrpcConfig grpcConfig = new GrpcConfig().target("localhost:50051");
+            GrpcConfig grpcConfig = new GrpcConfig().target("grpcproxy.gluonhq.net:443").useTLS(true);
             try {
                 this.tc = new TunnelClient(grpcConfig);
             } catch (IOException ex) {
@@ -1829,8 +1830,11 @@ public class PushServiceSocket {
         Request request = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
         Map<String, List<String>> headerMap = request.getHttpRequest().headers().map();
         if (rawBody == null) rawBody = "";
-        SignalRpcReply reply = getTunnelClient().sendMessage(request.getUri().toString(), method, headerMap, rawBody);
-        return new Response(reply);
+        byte[] answer = Native.Grpc_SendMessage(method, request.getUri().toString(), rawBody.getBytes(), headerMap);
+        LOG.info("GOT RESULT FROM LIBSIGNAL GRPC: "+Arrays.toString(answer));
+        return null;
+    // SignalRpcReply reply = getTunnelClient().sendMessage(request.getUri().toString(), method, headerMap, rawBody.getBytes());
+   // return new Response(reply);
     }
 
     private OkHttpClient buildOkHttpClient(boolean unidentified) {
