@@ -74,7 +74,7 @@ public class SignalServiceMessageReceiver {
             ConnectivityListener listener,
             SleepTimer timer,
             ClientZkProfileOperations clientZkProfileOperations,
-            boolean automaticNetworkRetry) {
+            boolean automaticNetworkRetry) throws IOException {
         this(urls, credentials, signalAgent, listener, timer, clientZkProfileOperations, automaticNetworkRetry, true);
     }
 
@@ -90,7 +90,7 @@ public class SignalServiceMessageReceiver {
                                       ConnectivityListener listener,
                                       SleepTimer timer,
                                       ClientZkProfileOperations clientZkProfileOperations,
-                                      boolean automaticNetworkRetry, boolean allowStories)
+                                      boolean automaticNetworkRetry, boolean allowStories) throws IOException
   {
     this.urls                      = urls;
     this.credentialsProvider       = credentials;
