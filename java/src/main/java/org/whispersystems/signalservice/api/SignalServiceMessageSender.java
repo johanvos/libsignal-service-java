@@ -142,6 +142,7 @@ import org.whispersystems.signalservice.internal.push.SignalServiceProtos.StoryM
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.TextAttachment;
 import org.whispersystems.signalservice.internal.push.exceptions.GroupMismatchedDevicesException;
 import org.whispersystems.signalservice.internal.push.exceptions.GroupStaleDevicesException;
+import org.whispersystems.signalservice.internal.push.exceptions.InvalidUnidentifiedAccessHeaderException;
 import org.whispersystems.util.ByteArrayUtil;
 
 /**
@@ -187,7 +188,9 @@ public class SignalServiceMessageSender {
             ExecutorService executor,
             long maxEnvelopeSize,
             boolean automaticNetworkRetry) {
+        LOG.info("Create SSMS0");
         this.socket = new PushServiceSocket(urls, credentialsProvider, signalAgent, clientZkProfileOperations, automaticNetworkRetry);
+        LOG.info("Create SSMS1");
         this.aciStore = store.aci();
         this.sessionLock = sessionLock;
         this.localAddress = new SignalServiceAddress(credentialsProvider.getAci(), credentialsProvider.getE164());
@@ -200,6 +203,7 @@ public class SignalServiceMessageSender {
         this.executor = executor != null ? executor : Executors.newSingleThreadExecutor();
         this.maxEnvelopeSize = maxEnvelopeSize;
         this.localPniIdentity = store.pni().getIdentityKeyPair();
+        LOG.info("Create SSMS2");
     }
 
     /**
@@ -2120,7 +2124,10 @@ public class SignalServiceMessageSender {
                     try {
                         SendMessageResponse response = socket.sendMessage(messages, unidentifiedAccess, story);
                         return SendMessageResult.success(recipient, messages.getDevices(), false, response.getNeedsSync() || aciStore.isMultiDevice(), System.currentTimeMillis() - startTime, content.getContent());
-                    } catch (IOException e) {
+                    } catch (InvalidUnidentifiedAccessHeaderException | UnregisteredUserException | MismatchedDevicesException | StaleDevicesException e) {
+                        throw e;
+                    } 
+                    catch (IOException e) {
                         Log.w(TAG, e);
                         Log.w(TAG, "[sendMessage][" + timestamp + "] Pipe failed, falling back... (" + e.getClass().getSimpleName() + ": " + e.getMessage() + ")");
                     }
@@ -2128,7 +2135,9 @@ public class SignalServiceMessageSender {
                     try {
                         SendMessageResponse response = socket.sendMessage(messages, unidentifiedAccess, story);
                         return SendMessageResult.success(recipient, messages.getDevices(), true, response.getNeedsSync() || aciStore.isMultiDevice(), System.currentTimeMillis() - startTime, content.getContent());
-                    } catch (IOException e) {
+                    } catch (InvalidUnidentifiedAccessHeaderException | UnregisteredUserException | MismatchedDevicesException | StaleDevicesException e) {
+                        throw e;
+                    }  catch (IOException e) {
                         Log.w(TAG, e);
                         Log.w(TAG, "[sendMessage][" + timestamp + "] Unidentified pipe failed, falling back...");
                     }

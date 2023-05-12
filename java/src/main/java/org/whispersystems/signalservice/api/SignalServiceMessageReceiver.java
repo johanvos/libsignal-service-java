@@ -229,6 +229,7 @@ public class SignalServiceMessageReceiver {
    * @return A SignalServiceMessagePipe for receiving Signal Service messages.
    */
   public SignalServiceMessagePipe createMessagePipe(Consumer callback) {
+      System.err.println("SSMR 0");
     WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
                                                             urls.getSignalServiceUrls()[0].getTrustStore(),
                                                             Optional.of(credentialsProvider), signalAgent, connectivityListener,
@@ -237,8 +238,12 @@ public class SignalServiceMessageReceiver {
                                                             urls.getDns(),
                                                             urls.getSignalProxy(),
                                                             callback, allowStories);
+      System.err.println("SSMR 1");
 
-    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
+    SignalServiceMessagePipe answer = new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
+         System.err.println("SSMR 2");
+
+    return answer;
   }
 
   public SignalServiceMessagePipe createUnidentifiedMessagePipe(Consumer callback) {

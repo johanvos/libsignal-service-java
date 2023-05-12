@@ -1,11 +1,15 @@
 package tokhttp3;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
@@ -40,10 +44,27 @@ public class OkHttpClient {
     }
 
     public WebSocket newWebSocket(Request request, WebSocketListener listener) {
+        GrpcWebSocket gws;
+        try {
+            LOG.info("Try grpcwebsocket");
+            gws = new GrpcWebSocket(listener);
+            Map<String, String> headers = new HashMap<>();
+            request.getHttpRequest().headers().map().forEach((String k, List<String> v) -> {
+                v.stream().forEach(val -> headers.put(k, val));
+            });
+            LOG.info("Try opening grpcwebsocket");
+      //      gws.open("wss://chat.signal.org/v1/websocket/", headers, listener);
+            gws.open(request.getUri().toString(), headers, listener);
+            LOG.info("Opened grpcwebsocket");
+            return gws;
+        } catch (IOException ex) {
+            Logger.getLogger(OkHttpClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
         java.net.http.WebSocket.Builder wsBuilder = jClient.newWebSocketBuilder();
         TokWebSocket answer = new TokWebSocket(listener);
         URI uri = request.getUri();
-        LOG.info("Create websocket to URI = " + uri.getHost());
+        LOG.info("Create websocket to URI = " + uri);
+        LOG.info("And headers = "+request.getHttpRequest().headers().map());
         request.getHttpRequest().headers().map().forEach((String k, List<String> v) -> {
             v.stream().forEach(val -> wsBuilder.header(k, val));
         });
@@ -89,6 +110,7 @@ public class OkHttpClient {
                         byte[] completed = baos.toByteArray();
                         baos = new ByteArrayOutputStream();
                         System.err.println("total size = " + completed.length);
+                        LOG.info("and contents = "+Arrays.toString(completed));
                         listener.onMessage(answer, ByteString.of(completed));
                     }
                 } catch (Throwable t) {

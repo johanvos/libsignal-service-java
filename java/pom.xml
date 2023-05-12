@@ -42,7 +42,7 @@
         <dependency>
           <groupId>io.privacyresearch</groupId>
           <artifactId>grpcproxy-client</artifactId>
-          <version>1.0.2-SNAPSHOT</version>
+          <version>1.0.2</version>
         </dependency>
 <!--
         <dependency>
@@ -64,7 +64,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.19.1</version>
+            <version>3.21.7</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -106,6 +106,14 @@
     </dependencies>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -130,13 +138,30 @@
            </configuration>
          </plugin>
   <plugin>
+<!--
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>
+                <configuration>
+                    <protocArtifact>com.google.protobuf:protoc:3.21.7:exe:${os.detected.classifier}</protocArtifact>
+                    <pluginId>grpc-java</pluginId>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.54.1:exe:${os.detected.classifier}</pluginArtifact>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+-->
         <groupId>org.xolstice.maven.plugins</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
         <version>0.6.1</version>
         <configuration>
           <javaOptions>lite</javaOptions>
           <protocExecutable>protoc</protocExecutable>
-          <!-- <protocExecutable>/usr/local/bin/protoc</protocExecutable> -->
         </configuration>
         <executions>
           <execution>
