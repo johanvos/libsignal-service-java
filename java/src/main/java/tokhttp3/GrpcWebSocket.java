@@ -24,7 +24,8 @@ public class GrpcWebSocket implements WebSocket {
 
     public GrpcWebSocket (WebSocketListener listener) throws IOException {
         GrpcConfig config = new GrpcConfig();
-        config.target("localhost:50051");
+        config.useTLS(true);
+        config.target("grpcproxy.gluonhq.net:443");
         tunnelClient = new TunnelClient(config);
     }
 
