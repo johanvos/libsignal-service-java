@@ -32,21 +32,11 @@ public class GrpcWebSocket implements WebSocket {
         StreamListener<SignalRpcReply> streamListener = new StreamListener<>() {
             @Override
             public void onNext(SignalRpcReply v) {
-                LOG.info("GRPCWS GOT MSG "+v.getMessage()+" with statuscode = "+v.getStatuscode());
-                LOG.info("GRPCWS GOT MSG class = "+v.getMessage().getClass());
-                LOG.info("GRPCWS length = "+v.getMessage().size());
-                String sContent = new String(v.getMessage().toByteArray());
-                LOG.info("GRPCWS GOT MSG str "+v.getMessage().toString());
-                LOG.info("GRPCWS GOT MSG strc "+sContent);
-                if ("111onOpen".equals(sContent)) {
-                    LOG.info("that's an onopen msg");
+                LOG.info("got message with statuscode  " + v.getStatuscode()+" and length = "+v.getMessage().size());
+                if (v.getStatuscode() == -100) {
+                    LOG.info("that's our onopen msg");
                     listener.onOpen(GrpcWebSocket.this, null);
                     return;
-                }
-                if (v.getStatuscode() == -100) {
-                  LOG.info("that's OUR onopen msg");
-                    listener.onOpen(GrpcWebSocket.this, null);
-                    return;  
                 }
                 ByteBuffer bbuff = v.getMessage().asReadOnlyByteBuffer();
                 ByteString bb = ByteString.of(bbuff);

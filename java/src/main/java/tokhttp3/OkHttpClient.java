@@ -44,21 +44,24 @@ public class OkHttpClient {
     }
 
     public WebSocket newWebSocket(Request request, WebSocketListener listener) {
-        GrpcWebSocket gws;
-        try {
-            LOG.info("Try grpcwebsocket");
-            gws = new GrpcWebSocket(listener);
-            Map<String, String> headers = new HashMap<>();
-            request.getHttpRequest().headers().map().forEach((String k, List<String> v) -> {
-                v.stream().forEach(val -> headers.put(k, val));
-            });
-            LOG.info("Try opening grpcwebsocket");
-      //      gws.open("wss://chat.signal.org/v1/websocket/", headers, listener);
-            gws.open(request.getUri().toString(), headers, listener);
-            LOG.info("Opened grpcwebsocket");
-            return gws;
-        } catch (IOException ex) {
-            Logger.getLogger(OkHttpClient.class.getName()).log(Level.SEVERE, null, ex);
+        boolean useGrpc = Boolean.getBoolean("wave.grpc");
+        if (useGrpc) {
+            GrpcWebSocket gws;
+            try {
+                LOG.info("Try grpcwebsocket");
+                gws = new GrpcWebSocket(listener);
+                Map<String, String> headers = new HashMap<>();
+                request.getHttpRequest().headers().map().forEach((String k, List<String> v) -> {
+                    v.stream().forEach(val -> headers.put(k, val));
+                });
+                LOG.info("Try opening grpcwebsocket");
+                gws.open(request.getUri().toString(), headers, listener);
+                LOG.info("Opened grpcwebsocket");
+                return gws;
+            } catch (IOException ex) {
+                Logger.getLogger(OkHttpClient.class.getName()).log(Level.SEVERE, null, ex);
+                LOG.severe("Creating websocket using grpc failed, fallback to normal");
+            }
         }
         java.net.http.WebSocket.Builder wsBuilder = jClient.newWebSocketBuilder();
         TokWebSocket answer = new TokWebSocket(listener);

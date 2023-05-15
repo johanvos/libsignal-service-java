@@ -261,7 +261,6 @@ public class SignalServiceMessagePipe {
                 .addAllHeaders(headers)
                 .setBody(ByteString.copyFrom(body))
                 .build();
-
         ListenableFuture<WebsocketResponse> response = websocket.sendRequest(requestMessage);
         ListenableFuture<SendGroupMessageResponse> answer = FutureTransformers.map(response, value -> {
             if (value.getStatus() == 404) {
