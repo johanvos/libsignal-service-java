@@ -237,8 +237,8 @@ public class SignalServiceMessageReceiver {
                                                             urls.getDns(),
                                                             urls.getSignalProxy(),
                                                             callback, allowStories);
-    SignalServiceMessagePipe answer = new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
-    return answer;
+
+    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
   }
 
   public SignalServiceMessagePipe createUnidentifiedMessagePipe(Consumer callback) {

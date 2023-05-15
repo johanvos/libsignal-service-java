@@ -56,7 +56,6 @@ public class GrpcWebSocket implements WebSocket {
     @Override
     public boolean send(ByteString obs) {
         ByteBuffer bb = obs.asByteBuffer();
-       
         SignalRpcMessage srm = SignalRpcMessage.newBuilder()
                 .setBody(com.google.protobuf.ByteString.copyFrom(bb)).build();
         rpcStream.onNext(srm);
@@ -72,5 +71,5 @@ public class GrpcWebSocket implements WebSocket {
     public long queueSize() {
         return 1;
     }
-    
+
 }

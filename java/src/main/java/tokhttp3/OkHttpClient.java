@@ -66,8 +66,7 @@ public class OkHttpClient {
         java.net.http.WebSocket.Builder wsBuilder = jClient.newWebSocketBuilder();
         TokWebSocket answer = new TokWebSocket(listener);
         URI uri = request.getUri();
-        LOG.info("Create websocket to URI = " + uri);
-        LOG.info("And headers = "+request.getHttpRequest().headers().map());
+        LOG.info("Create websocket to URI = " + uri.getHost());
         request.getHttpRequest().headers().map().forEach((String k, List<String> v) -> {
             v.stream().forEach(val -> wsBuilder.header(k, val));
         });
@@ -113,7 +112,6 @@ public class OkHttpClient {
                         byte[] completed = baos.toByteArray();
                         baos = new ByteArrayOutputStream();
                         System.err.println("total size = " + completed.length);
-                        LOG.info("and contents = "+Arrays.toString(completed));
                         listener.onMessage(answer, ByteString.of(completed));
                     }
                 } catch (Throwable t) {
