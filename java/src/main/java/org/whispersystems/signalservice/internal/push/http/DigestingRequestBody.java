@@ -7,11 +7,11 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachment.Pro
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.http.HttpRequest;
 
-import tokhttp3.MediaType;
-import tokhttp3.RequestBody;
-import okio.BufferedSink;
+import com.gluonhq.snl.doubt.MediaType;
+import com.gluonhq.snl.doubt.RequestBody;
+import java.io.OutputStream;
+//import okio.BufferedSink;
 
 public class DigestingRequestBody extends RequestBody {
 
@@ -50,8 +50,8 @@ public class DigestingRequestBody extends RequestBody {
   }
 
   @Override
-  public void writeTo(BufferedSink sink) throws IOException {
-    DigestingOutputStream outputStream = outputStreamFactory.createFor(new SkippingOutputStream(contentStart, sink.outputStream()));
+  public void writeTo(OutputStream sink) throws IOException {
+    DigestingOutputStream outputStream = outputStreamFactory.createFor(new SkippingOutputStream(contentStart, sink));
     byte[]                buffer       = new byte[8192];
 
     int read;
@@ -83,10 +83,10 @@ public class DigestingRequestBody extends RequestBody {
   public byte[] getTransmittedDigest() {
     return digest;
   }
-
-    @Override
-    public HttpRequest.BodyPublisher getBodyPublisher() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-    }
+//
+//    @Override
+//    public HttpRequest.BodyPublisher getBodyPublisher() {
+//        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+//    }
 
 }

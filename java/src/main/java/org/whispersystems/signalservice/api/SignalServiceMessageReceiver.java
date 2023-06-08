@@ -185,29 +185,32 @@ public class SignalServiceMessageReceiver {
    * @return A SignalServiceMessagePipe for receiving Signal Service messages.
    */
   public SignalServiceMessagePipe createMessagePipe(Consumer callback) {
-    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
-                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
-                                                            Optional.of(credentialsProvider), signalAgent, connectivityListener,
-                                                            sleepTimer,
-                                                            urls.getNetworkInterceptors(),
-                                                            urls.getDns(),
-                                                            urls.getSignalProxy(),
-                                                            callback, allowStories);
-
-    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
+      throw new UnsupportedOperationException("NYI");
+//    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
+//                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
+//                                                            Optional.of(credentialsProvider), signalAgent, connectivityListener,
+//                                                            sleepTimer,
+////                                                            urls.getNetworkInterceptors(),
+////                                                            urls.getDns(),
+//                                                            urls.getSignalProxy(),
+//                                                            callback, allowStories);
+//
+//    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
   }
 
   public SignalServiceMessagePipe createUnidentifiedMessagePipe(Consumer callback) {
-    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
-                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
-                                                            Optional.<CredentialsProvider>empty(), signalAgent, connectivityListener,
-                                                            sleepTimer,
-                                                            urls.getNetworkInterceptors(),
-                                                            urls.getDns(),
-                                                            urls.getSignalProxy(),
-                                                            callback, allowStories);
-
-    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
+            throw new UnsupportedOperationException("NYI");
+//
+//    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
+//                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
+//                                                            Optional.<CredentialsProvider>empty(), signalAgent, connectivityListener,
+//                                                            sleepTimer,
+////                                                            urls.getNetworkInterceptors(),
+////                                                            urls.getDns(),
+//                                                            urls.getSignalProxy(),
+//                                                            callback, allowStories);
+//
+//    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
   }
 
   public void setSoTimeoutMillis(long soTimeoutMillis) {
