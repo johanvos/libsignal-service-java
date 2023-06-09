@@ -4,14 +4,22 @@ package com.gluonhq.snl;
  *
  * @author johan
  */
-public class ResponseBody {
+public class ResponseBody<T> {
+
+    T body;
+    
+    public ResponseBody(T t) {
+        this.body = t;
+    }
 
     public String string() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return (String)body;
     }
 
     public byte[] bytes() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (body instanceof String bodyString) return bodyString.getBytes();
+        if (body == null) return new byte[0];
+        return (byte[]) body;
     }
     
 }

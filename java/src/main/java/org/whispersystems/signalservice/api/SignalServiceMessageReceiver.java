@@ -6,6 +6,7 @@
 
 package org.whispersystems.signalservice.api;
 
+import com.gluonhq.snl.NetworkClient;
 import org.signal.libsignal.zkgroup.profiles.ClientZkProfileOperations;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.libsignal.protocol.InvalidMessageException;
@@ -184,8 +185,10 @@ public class SignalServiceMessageReceiver {
    * 
    * @return A SignalServiceMessagePipe for receiving Signal Service messages.
    */
-  public SignalServiceMessagePipe createMessagePipe(Consumer callback) {
-      throw new UnsupportedOperationException("NYI");
+    public NetworkClient createMessagePipe(Consumer callback) {
+        NetworkClient networkClient = new NetworkClient(urls.getSignalServiceUrls()[0], Optional.of(credentialsProvider), signalAgent, allowStories);
+        callback.accept(networkClient);
+//                                                            Optional.of(credentialsProvider), signalAgent,  )
 //    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
 //                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
 //                                                            Optional.of(credentialsProvider), signalAgent, connectivityListener,
@@ -195,11 +198,15 @@ public class SignalServiceMessageReceiver {
 //                                                            urls.getSignalProxy(),
 //                                                            callback, allowStories);
 //
-//    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
-  }
+        // return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
+        return networkClient;
+    }
 
-  public SignalServiceMessagePipe createUnidentifiedMessagePipe(Consumer callback) {
-            throw new UnsupportedOperationException("NYI");
+  public NetworkClient createUnidentifiedMessagePipe(Consumer callback) {
+              NetworkClient networkClient = new NetworkClient(urls.getSignalServiceUrls()[0], Optional.empty(), signalAgent, allowStories);
+        callback.accept(networkClient);
+              return networkClient;
+
 //
 //    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
 //                                                            urls.getSignalServiceUrls()[0].getTrustStore(),

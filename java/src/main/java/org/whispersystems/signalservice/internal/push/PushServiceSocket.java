@@ -166,6 +166,7 @@ import com.gluonhq.snl.NetworkClient;
 import com.gluonhq.snl.Response;
 import com.gluonhq.snl.ResponseBody;
 import com.gluonhq.snl.doubt.MediaType;
+import java.net.http.HttpResponse;
 
 import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation;
 import org.signal.libsignal.protocol.InvalidKeyException;
@@ -1771,9 +1772,10 @@ public class PushServiceSocket {
             boolean doNotAddAuthenticationOrUnidentifiedAccessKey,
             String rawBody)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-                 throw new UnsupportedOperationException("NYI");
+             //    throw new UnsupportedOperationException("NYI");
 //
         Response response = getServiceConnection(urlFragment, method, body, headers, unidentifiedAccessKey, doNotAddAuthenticationOrUnidentifiedAccessKey, rawBody);
+        return response;
 //        ResponseBody responseBody = response.body();
 //        try {
 //            responseCodeHandler.handle(response.code(), responseBody);
@@ -1886,50 +1888,24 @@ public class PushServiceSocket {
             boolean doNotAddAuthenticationOrUnidentifiedAccessKey,
             String rawBody)
             throws PushNetworkException {
-                 throw new UnsupportedOperationException("NYI");
-//
-//        try {
-//            
-//            HttpRequest serviceRequest = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
-//            recheckGrpc();
-//            LOG.info("Need to use grpc? "+useGrpc);
-//            if (useGrpc) {
-//                Map<String, List<String>> realHeaders = serviceRequest.headers().map();
-//                if (rawBody == null) rawBody = "";
-//                Response ranswer = getGrpcConnection(urlFragment, method, rawBody.getBytes(), realHeaders);
-//                LOG.info("1GRPC answer for frag "+urlFragment+", size = " + ranswer.body().bytes().length);
-//                LOG.finest("1GRPC answer = "+Arrays.toString(ranswer.body().bytes()));
-//                return ranswer;
-//            }
-//            OkHttpClient okHttpClient = buildNetworkClient(unidentifiedAccess.isPresent());
-//            byte[] b = new byte[0];
-//            if (body != null) b = body.getRawBytes();
-//            Call call = okHttpClient.newCall(serviceRequest, b);
-//
-//            synchronized (connections) {
-//                connections.add(call);
-//            }
-//
-//            try {
-//                Response answer = call.execute();
-//                LOG.info("1legacy answer size = " + answer.body().bytes().length);
-//                LOG.finest("1legacy answer = " + Arrays.toString(answer.body().bytes()));
-//                return answer;
-//            } finally {
-//                synchronized (connections) {
-//                    connections.remove(call);
-//                }
-//            }
-//        } catch (IOException e) {
-//            throw new PushNetworkException(e);
-//        }
+
+        try {
+            HttpRequest serviceRequest = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
+            NetworkClient client = buildNetworkClient(unidentifiedAccess.isPresent());
+            HttpResponse httpAnswer = client.sendRequest(serviceRequest);
+            Response answer = new Response(httpAnswer);
+            return answer;
+        } catch (IOException | InterruptedException ex) {
+            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
+            throw new PushNetworkException(ex);
+        }
     }
 
     private NetworkClient buildNetworkClient(boolean unidentified) {
-                 throw new UnsupportedOperationException("NYI");
 //
-//        ServiceConnectionHolder connectionHolder = (ServiceConnectionHolder) getRandom(serviceClients, random);
-//        NetworkClient baseClient = unidentified ? connectionHolder.getUnidentifiedClient() : connectionHolder.getClient();
+        ServiceConnectionHolder connectionHolder = (ServiceConnectionHolder) getRandom(serviceClients, random);
+        NetworkClient baseClient = unidentified ? connectionHolder.getUnidentifiedClient() : connectionHolder.getClient();
+        return baseClient;
 //        return baseClient.newBuilder()
 //                .connectTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
 //                .readTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
@@ -1943,46 +1919,42 @@ public class PushServiceSocket {
             Map<String, String> headers,
             Optional<UnidentifiedAccess> unidentifiedAccess,
             boolean doNotAddAuthenticationOrUnidentifiedAccessKey) {
-         throw new UnsupportedOperationException("NYI");
-//
-//        ServiceConnectionHolder connectionHolder = (ServiceConnectionHolder) getRandom(serviceClients, random);
-//
-////      Log.d(TAG, "Push service URL: " + connectionHolder.getUrl());
-////      Log.d(TAG, "Opening URL: " + String.format("%s%s", connectionHolder.getUrl(), urlFragment));
-//        HttpRequest.Builder request = HttpRequest.newBuilder();
-//        try {
-//            request.uri(new URI(String.format("%s%s", connectionHolder.getUrl(), urlFragment)));
-//            if (body == null) {
-//                request.method(method, BodyPublishers.noBody());
-//            } else {
-//                request.method(method, BodyPublishers.ofByteArray(body.getRawBytes()));
-//                if (body.contentType() != null) request.header("Content-Type", body.contentType().getMediaType());
-//            }
-//        } catch (URISyntaxException | IOException ex) {
-//            LOG.log(Level.SEVERE, null, ex);
-//            throw new IllegalArgumentException (ex);
-//        }
-//        for (Map.Entry<String, String> header : headers.entrySet()) {
-//            request.header(header.getKey(), header.getValue());
-//        }
-//
-//        if (!headers.containsKey("Authorization") && !doNotAddAuthenticationOrUnidentifiedAccessKey) {
-//            if (unidentifiedAccess.isPresent()) {
-//                request.header("Unidentified-Access-Key", Base64.encodeBytes(unidentifiedAccess.get().getUnidentifiedAccessKey()));
-//            } else if (credentialsProvider.getPassword() != null) {
-//                request.header("Authorization", getAuthorizationHeader(credentialsProvider));
-//            }
-//        }
-//
-//        if (signalAgent != null) {
-//            request.header("X-Signal-Agent", signalAgent);
-//        }
-//
-//        if (connectionHolder.getHostHeader().isPresent()) {
-//            request.header("Host", connectionHolder.getHostHeader().get());
-//        }
-//
-//        return request.build();
+
+        ServiceConnectionHolder connectionHolder = (ServiceConnectionHolder) getRandom(serviceClients, random);
+        HttpRequest.Builder request = HttpRequest.newBuilder();
+        try {
+            request.uri(new URI(String.format("%s%s", connectionHolder.getUrl(), urlFragment)));
+            if (body == null) {
+                request.method(method, BodyPublishers.noBody());
+            } else {
+                request.method(method, BodyPublishers.ofByteArray(body.getRawBytes()));
+                if (body.contentType() != null) request.header("Content-Type", body.contentType().getMediaType());
+            }
+        } catch (Exception ex) {
+            LOG.log(Level.SEVERE, null, ex);
+            throw new IllegalArgumentException (ex);
+        }
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            request.header(header.getKey(), header.getValue());
+        }
+
+        if (!headers.containsKey("Authorization") && !doNotAddAuthenticationOrUnidentifiedAccessKey) {
+            if (unidentifiedAccess.isPresent()) {
+                request.header("Unidentified-Access-Key", Base64.encodeBytes(unidentifiedAccess.get().getUnidentifiedAccessKey()));
+            } else if (credentialsProvider.getPassword() != null) {
+                request.header("Authorization", getAuthorizationHeader(credentialsProvider));
+            }
+        }
+
+        if (signalAgent != null) {
+            request.header("X-Signal-Agent", signalAgent);
+        }
+
+        if (connectionHolder.getHostHeader().isPresent()) {
+            request.header("Host", connectionHolder.getHostHeader().get());
+        }
+
+        return request.build();
     }
 
     private ConnectionHolder[] clientsFor(ClientSet clientSet) {
@@ -2277,7 +2249,7 @@ public class PushServiceSocket {
     }
 
     private static NetworkClient createConnectionClient(SignalUrl url, Optional<SignalProxy> proxy) {
-        return new NetworkClient();
+      return new NetworkClient(url, "FOO", true);
 
     }
 

@@ -31,6 +31,10 @@ public class RequestBody {
         return this.mediaType;
     }
 
+    public byte[] getRawBytes() {
+        return jsonBody.getBytes();
+    }
+
     public void writeTo(OutputStream sink) throws IOException {
         throw new UnsupportedOperationException("NYI");
     }
