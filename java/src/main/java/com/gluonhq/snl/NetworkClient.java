@@ -50,7 +50,7 @@ public class NetworkClient {
     private BlockingQueue<SignalServiceEnvelope> envelopeQueue = new LinkedBlockingQueue<>();
     private Thread formatProcessingThread;
     private boolean closed = false;
-  private static final String SERVER_DELIVERED_TIMESTAMP_HEADER = "X-Signal-Timestamp";
+    private static final String SERVER_DELIVERED_TIMESTAMP_HEADER = "X-Signal-Timestamp";
 
     public NetworkClient(SignalUrl url, String agent, boolean allowStories) {
         this(url, Optional.empty(), agent, allowStories);
@@ -101,7 +101,7 @@ public class NetworkClient {
         }
         WebSocket.Listener myListener = new MyWebsocketListener();
         CompletableFuture<WebSocket> webSocketProcess = wsBuilder.buildAsync(uri, myListener);
-        
+
         CountDownLatch cdl = new CountDownLatch(1);
         Executors.newCachedThreadPool().submit(() -> {
             try {
@@ -150,11 +150,15 @@ public class NetworkClient {
             }
         }
         try {
-            LOG.info("Wait for requestMessage...");
-            WebSocketRequestMessage request = wsRequestMessageQueue.poll(timeout, unit);
-            LOG.info("Got requestMessage, process now "+request);
-            Optional<SignalServiceEnvelope> sse = handleWebSocketRequestMessage(request);
-            if (sse.isPresent()) return sse.get();
+            while (true) { // we only return existing envelopes
+                LOG.info("Wait for requestMessage...");
+                WebSocketRequestMessage request = wsRequestMessageQueue.poll(timeout, unit);
+                LOG.info("Got requestMessage, process now " + request);
+                Optional<SignalServiceEnvelope> sse = handleWebSocketRequestMessage(request);
+                if (sse.isPresent()) {
+                    return sse.get();
+                }
+            }
         } catch (Exception ex) {
             Logger.getLogger(NetworkClient.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -162,78 +166,85 @@ public class NetworkClient {
     }
 
     Optional<SignalServiceEnvelope> handleWebSocketRequestMessage(WebSocketRequestMessage request) throws IOException {
-           WebSocketProtos.WebSocketResponseMessage response = createWebSocketResponse(request);
+        WebSocketProtos.WebSocketResponseMessage response = createWebSocketResponse(request);
 
         try {
-        if (isSignalServiceEnvelope(request)) {
-          Optional<String> timestampHeader = findHeader(request, SERVER_DELIVERED_TIMESTAMP_HEADER);
-          long             timestamp       = 0;
+            if (isSignalServiceEnvelope(request)) {
+                Optional<String> timestampHeader = findHeader(request, SERVER_DELIVERED_TIMESTAMP_HEADER);
+                long timestamp = 0;
 
-          if (timestampHeader.isPresent()) {
-            try {
-              timestamp = Long.parseLong(timestampHeader.get());
-            } catch (NumberFormatException e) {
-              LOG.warning("Failed to parse " + SERVER_DELIVERED_TIMESTAMP_HEADER);
+                if (timestampHeader.isPresent()) {
+                    try {
+                        timestamp = Long.parseLong(timestampHeader.get());
+                    } catch (NumberFormatException e) {
+                        LOG.warning("Failed to parse " + SERVER_DELIVERED_TIMESTAMP_HEADER);
+                    }
+                }
+
+                SignalServiceEnvelope envelope = new SignalServiceEnvelope(request.getBody().toByteArray(), timestamp);
+                LOG.finer("Request " + Objects.hashCode(request) + " has envelope " + Objects.hashCode(envelope));
+                return Optional.of(envelope);
+            } else if (isSocketEmptyRequest(request)) {
+                return Optional.empty();
             }
-          }
-
-          SignalServiceEnvelope envelope = new SignalServiceEnvelope(request.getBody().toByteArray(), timestamp);
-          LOG.finer("Request "+Objects.hashCode(request)+ " has envelope "+Objects.hashCode(envelope));
-          return Optional.of(envelope);
-        } else if (isSocketEmptyRequest(request)) {
-          return Optional.empty();
+        } finally {
+            LOG.finer("[SSMP] readOrEmpty SHOULD send response");
+            try {
+                WebSocketMessage msg = WebSocketMessage.newBuilder()
+                        .setType(WebSocketMessage.Type.RESPONSE)
+                        .setResponse(response)
+                        .build();
+                msg.toByteArray();
+                webSocket.sendBinary(ByteBuffer.wrap(msg.toByteArray()), true);
+            } catch (Exception ioe) {
+                LOG.log(Level.SEVERE, "IO exception in sending response", ioe);
+            }
+            LOG.fine("[SSMP] readOrEmpty did send response");
         }
-      } finally {
-        LOG.finer("[SSMP] readOrEmpty SHOULD send response");
-//        try {
-//            websocket.sendResponse(response);
-//        } catch (IOException ioe) {
-//            LOG.log(Level.SEVERE, "IO exception in sending response", ioe);
-//        }
-        LOG.fine("[SSMP] readOrEmpty did send response");
-      }   
         return Optional.empty();
     }
-    
-  private boolean isSignalServiceEnvelope(WebSocketRequestMessage message) {
-    return "PUT".equals(message.getVerb()) && "/api/v1/message".equals(message.getPath());
-  }
 
-  private boolean isSocketEmptyRequest(WebSocketRequestMessage message) {
-    return "PUT".equals(message.getVerb()) && "/api/v1/queue/empty".equals(message.getPath());
-  }
-  private WebSocketProtos.WebSocketResponseMessage createWebSocketResponse(WebSocketRequestMessage request) {
-    if (isSignalServiceEnvelope(request)) {
-      return WebSocketProtos.WebSocketResponseMessage.newBuilder()
-                                     .setId(request.getId())
-                                     .setStatus(200)
-                                     .setMessage("OK")
-                                     .build();
-    } else {
-      return WebSocketProtos.WebSocketResponseMessage.newBuilder()
-                                     .setId(request.getId())
-                                     .setStatus(400)
-                                     .setMessage("Unknown")
-                                     .build();
-    }
-  }
-
-  private static Optional<String> findHeader(WebSocketRequestMessage message, String targetHeader) {
-    if (message.getHeadersCount() == 0) {
-      return Optional.empty();
+    private boolean isSignalServiceEnvelope(WebSocketRequestMessage message) {
+        return "PUT".equals(message.getVerb()) && "/api/v1/message".equals(message.getPath());
     }
 
-    for (String header : message.getHeadersList()) {
-      if (header.startsWith(targetHeader)) {
-        String[] split = header.split(":");
-        if (split.length == 2 && split[0].trim().toLowerCase().equals(targetHeader.toLowerCase())) {
-          return Optional.of(split[1].trim());
+    private boolean isSocketEmptyRequest(WebSocketRequestMessage message) {
+        return "PUT".equals(message.getVerb()) && "/api/v1/queue/empty".equals(message.getPath());
+    }
+
+    private WebSocketProtos.WebSocketResponseMessage createWebSocketResponse(WebSocketRequestMessage request) {
+        if (isSignalServiceEnvelope(request)) {
+            return WebSocketProtos.WebSocketResponseMessage.newBuilder()
+                    .setId(request.getId())
+                    .setStatus(200)
+                    .setMessage("OK")
+                    .build();
+        } else {
+            return WebSocketProtos.WebSocketResponseMessage.newBuilder()
+                    .setId(request.getId())
+                    .setStatus(400)
+                    .setMessage("Unknown")
+                    .build();
         }
-      }
     }
 
-    return Optional.empty();
-  }
+    private static Optional<String> findHeader(WebSocketRequestMessage message, String targetHeader) {
+        if (message.getHeadersCount() == 0) {
+            return Optional.empty();
+        }
+
+        for (String header : message.getHeadersList()) {
+            if (header.startsWith(targetHeader)) {
+                String[] split = header.split(":");
+                if (split.length == 2 && split[0].trim().toLowerCase().equals(targetHeader.toLowerCase())) {
+                    return Optional.of(split[1].trim());
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
+
     private void processFormatConversion() {
         LOG.info("start processformatthread");
         while (!closed) {
@@ -242,7 +253,7 @@ public class NetworkClient {
                 byte[] raw = rawByteQueue.take();
                 LOG.info("Got raw bytes");
                 WebSocketMessage message = WebSocketMessage.parseFrom(raw);
-                LOG.info("Got message, type = "+message.getType());
+                LOG.info("Got message, type = " + message.getType());
                 if (message.getType() == WebSocketMessage.Type.REQUEST) {
                     LOG.info("Add request message to queue");
                     wsRequestMessageQueue.put(message.getRequest());
@@ -250,11 +261,10 @@ public class NetworkClient {
             } catch (Throwable t) {
                 t.printStackTrace();
             }
-            
+
         }
     }
 
-    
     HttpResponse.BodyHandler createBodyHandler() {
         HttpResponse.BodyHandler mbh = new HttpResponse.BodyHandler() {
             @Override
