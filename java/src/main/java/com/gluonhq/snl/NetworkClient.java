@@ -287,9 +287,9 @@ public class NetworkClient {
         return mbh;
     }
 
-    public HttpResponse sendRequest(HttpRequest request) throws IOException, InterruptedException {
-        HttpResponse response = this.httpClient.send(request, createBodyHandler());
-        return response;
+    public Response sendRequest(HttpRequest request) throws IOException, InterruptedException {
+        HttpResponse httpResponse = this.httpClient.send(request, createBodyHandler());
+        return new Response(httpResponse);
     }
 
     class MyWebsocketListener implements WebSocket.Listener {

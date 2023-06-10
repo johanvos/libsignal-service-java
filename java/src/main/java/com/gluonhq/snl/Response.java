@@ -24,5 +24,18 @@ public class Response<T> {
     public List<String> headers(String setCookie) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
+
+    public String header(String key) {
+                throw new UnsupportedOperationException("Not supported yet.");
+
+    }
+    public boolean isSuccessful() {
+        int sc = httpAnswer.statusCode();
+        return ((sc >= 200) && (sc < 300));
+    }
+
+    public int getStatusCode() {
+        return httpAnswer.statusCode();
+    }
+
 }

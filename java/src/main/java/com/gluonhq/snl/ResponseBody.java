@@ -21,5 +21,10 @@ public class ResponseBody<T> {
         if (body == null) return new byte[0];
         return (byte[]) body;
     }
-    
+
+    public int contentLength() {
+        if (body instanceof byte[] bb) return bb.length;
+        return -1;
+    }
+
 }

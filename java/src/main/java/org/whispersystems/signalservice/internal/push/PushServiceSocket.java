@@ -1287,95 +1287,54 @@ public class PushServiceSocket {
 
     private void downloadFromCdn(OutputStream outputStream, long offset, int cdnNumber, String path, long maxSizeBytes, ProgressListener listener)
             throws PushNetworkException, NonSuccessfulResponseCodeException, MissingConfigurationException {
-         throw new UnsupportedOperationException("NYI");
-//
-//        ConnectionHolder[] cdnNumberClients = cdnClientsMap.get(cdnNumber);
-//        if (cdnNumberClients == null) {
-//            throw new MissingConfigurationException("Attempted to download from unsupported CDN number: " + cdnNumber + ", Our configuration supports: " + cdnClientsMap.keySet());
-//        }
-//        ConnectionHolder connectionHolder = getRandom(cdnNumberClients, random);
-//        OkHttpClient okHttpClient = connectionHolder.getClient()
-//                .newBuilder()
-//                .connectTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-//                .readTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-//                .build();
-//
-//        HttpRequest.Builder builder = HttpRequest.newBuilder();
-//        String format = connectionHolder.getUrl() + "/" + path;
-//        URI uri;
-//        try {
-//            uri = new URI(format);
-//        } catch (URISyntaxException ex) {
-//            throw new IllegalArgumentException("Wrong uri for "+format, ex);
-//        }
-//        builder.uri(uri);
-//
-//        if (connectionHolder.getHostHeader().isPresent()) {
-//            builder.header("Host", connectionHolder.getHostHeader().get());
-//        }
-//
-//        if (offset > 0) {
-//            Log.i(TAG, "Starting download from CDN with offset " + offset);
-//            builder.header("Range", "bytes=" + offset + "-");
-//        }
-//
-//        Call call = okHttpClient.newCall(builder.build(), new byte[0]);
-//
-//        synchronized (connections) {
-//            connections.add(call);
-//        }
-//
-//        Response response = null;
-//        ResponseBody body = null;
-//
-//        try {
-//            response = call.execute();
-//
-//            if (response.isSuccessful()) {
-//                body = response.body();
-//
-//                if (body == null) {
-//                    throw new PushNetworkException("No response body!");
-//                }
-//                if (body.contentLength() > maxSizeBytes) {
-//                    throw new PushNetworkException("Response exceeds max size!");
-//                }
-//
-//                InputStream in = body.byteStream();
-//                byte[] buffer = new byte[32768];
-//
-//                int read = 0;
-//                long totalRead = offset;
-//
-//                while ((read = in.read(buffer, 0, buffer.length)) != -1) {
-//                    outputStream.write(buffer, 0, read);
-//                    if ((totalRead += read) > maxSizeBytes) {
-//                        throw new PushNetworkException("Response exceeded max size!");
-//                    }
-//
-//                    if (listener != null) {
-//                        listener.onAttachmentProgress(body.contentLength() + offset, totalRead);
-//                    }
-//                }
-//
-//                return;
-//            } else if (response.code() == 416) {
-//                throw new RangeException(offset);
-//            }
-//        } catch (NonSuccessfulResponseCodeException | PushNetworkException e) {
-//            throw e;
-//        } catch (IOException e) {
-//            throw new PushNetworkException(e);
-//        } finally {
-//            if (body != null) {
-//                body.close();
-//            }
-//            synchronized (connections) {
-//                connections.remove(call);
-//            }
-//        }
-//
-//        throw new NonSuccessfulResponseCodeException(response.code(), "Response: " + response);
+        LOG.info("need "+path+" from CDN");
+        ConnectionHolder[] cdnNumberClients = cdnClientsMap.get(cdnNumber);
+        if (cdnNumberClients == null) {
+            throw new MissingConfigurationException("Attempted to download from unsupported CDN number: " + cdnNumber + ", Our configuration supports: " + cdnClientsMap.keySet());
+        }
+        ConnectionHolder connectionHolder = getRandom(cdnNumberClients, random);
+        NetworkClient client = connectionHolder.getClient();
+        HttpRequest.Builder builder = HttpRequest.newBuilder();
+        String format = connectionHolder.getUrl() + "/" + path;
+        URI uri;
+        try {
+            uri = new URI(format);
+        } catch (URISyntaxException ex) {
+            throw new IllegalArgumentException("Wrong uri for "+format, ex);
+        }
+        builder.uri(uri);
+
+        if (connectionHolder.getHostHeader().isPresent()) {
+            builder.header("Host", connectionHolder.getHostHeader().get());
+        }
+
+        if (offset > 0) {
+            Log.i(TAG, "Starting download from CDN with offset " + offset);
+            builder.header("Range", "bytes=" + offset + "-");
+        }
+        try {
+            Response response = client.sendRequest(builder.build());
+
+            if (response.isSuccessful()) {
+                ResponseBody body = response.body();
+
+                if (body == null) {
+                    throw new PushNetworkException("No response body!");
+                }
+                LOG.info("We got "+body.contentLength()+" from CDN");
+                if (body.contentLength() > maxSizeBytes) {
+                    throw new PushNetworkException("Response exceeds max size!");
+                }
+                outputStream.write(body.bytes());
+
+            } else if (response.getStatusCode() == 416) {
+                throw new RangeException(offset);
+            }
+        } catch (IOException ioe) {
+            throw new PushNetworkException(ioe);
+        } catch (InterruptedException ex) {
+            throw new PushNetworkException(ex);
+        }
     }
 
     private byte[] uploadToCdn0(String path, String acl, String key, String policy, String algorithm,
@@ -1892,8 +1851,7 @@ public class PushServiceSocket {
         try {
             HttpRequest serviceRequest = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
             NetworkClient client = buildNetworkClient(unidentifiedAccess.isPresent());
-            HttpResponse httpAnswer = client.sendRequest(serviceRequest);
-            Response answer = new Response(httpAnswer);
+            Response answer = client.sendRequest(serviceRequest);
             return answer;
         } catch (IOException | InterruptedException ex) {
             Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
@@ -2064,96 +2022,79 @@ public class PushServiceSocket {
 
     private Response makeStorageRequestResponse(String authorization, String path, String method, RequestBody body, ResponseCodeHandler responseCodeHandler)
             throws PushNetworkException, NonSuccessfulResponseCodeException {
-                 throw new UnsupportedOperationException("NYI");
 
-//        ConnectionHolder connectionHolder = getRandom(storageClients, random);
-//        OkHttpClient okHttpClient = connectionHolder.getClient()
-//                .newBuilder()
-//                .connectTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-//                .readTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-//                .build();
-//        Log.d(TAG, "Opening URL: " + connectionHolder.getUrl());
-//        HttpRequest.Builder hrBuilder = HttpRequest.newBuilder();
-//        String uriFormat = connectionHolder.getUrl() + path;
-//        try {
-//            hrBuilder.uri(new URI(uriFormat));
-//        } catch (URISyntaxException ex) {
-//            LOG.log(Level.SEVERE, "Wrong URI: " + uriFormat, ex);
-//        }
-//        if (body == null) {
-//            BodyPublisher bodyPublisher = BodyPublishers.noBody();
-//            hrBuilder.method(method, bodyPublisher);
-//        } else {
-//            try {
-//                BodyPublisher bodyPublisher = BodyPublishers.ofByteArray(body.getRawBytes());
-//                hrBuilder.method(method, bodyPublisher);
-//                LOG.info("Adding contenttype: "+body.contentType().getMediaType());
-//                hrBuilder.header("Content-Type", body.contentType().getMediaType());
-//            } catch (IOException ex) {
-//                Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//        }
-//
-//        if (connectionHolder.getHostHeader().isPresent()) {
-//            hrBuilder.header("Host", connectionHolder.getHostHeader().get());
-//        }
-//
-//        if (authorization != null) {
-//            hrBuilder.header("Authorization", authorization);
-//        }
-//
-//        byte[] rawBytes= new byte[0];
-//        try {
-//            if (body != null) rawBytes = body.getRawBytes();
-//        } catch (IOException ioe) {
-//            ioe.printStackTrace();
-//        }
-//        Call call = okHttpClient.newCall(hrBuilder.build(), rawBytes);
-//
-//        synchronized (connections) {
-//            connections.add(call);
-//        }
-//
-//        Response response;
-//
-//        try {
-//            response = call.execute();
-//
-//            if (response.isSuccessful() && response.code() != 204) {
-//                return response;
-//            }
-//        } catch (IOException e) {
-//            throw new PushNetworkException(e);
-//        } finally {
-//            synchronized (connections) {
-//                connections.remove(call);
-//            }
-//        }
-//        ResponseBody responseBody = response.body();
-//
-//        responseCodeHandler.handle(response.code(), responseBody, response::header);
-//
-//        switch (response.code()) {
-//            case 204:
-//                throw new NoContentException("No content!");
-//            case 401:
-//            case 403:
-//                throw new AuthorizationFailedException(response.code(), "Authorization failed!");
-//            case 404:
-//                throw new NotFoundException("Not found");
-//            case 409:
-//                if (response.body() != null) {
-//                    throw new ContactManifestMismatchException(readBodyBytes(response.body()));
-//                } else {
-//                    throw new ConflictException();
-//                }
-//            case 429:
-//                throw new RateLimitException(response.code(), "Rate limit exceeded: " + response.code());
-//            case 499:
-//                throw new DeprecatedVersionException();
-//        }
-//
-//        throw new NonSuccessfulResponseCodeException(response.code(), "Response: " + response);
+        ConnectionHolder connectionHolder = getRandom(storageClients, random);
+        NetworkClient client = connectionHolder.getClient();
+        Log.d(TAG, "Opening URL: " + connectionHolder.getUrl());
+        HttpRequest.Builder hrBuilder = HttpRequest.newBuilder();
+        String uriFormat = connectionHolder.getUrl() + path;
+        try {
+            hrBuilder.uri(new URI(uriFormat));
+        } catch (URISyntaxException ex) {
+            LOG.log(Level.SEVERE, "Wrong URI: " + uriFormat, ex);
+        }
+        if (body == null) {
+            BodyPublisher bodyPublisher = BodyPublishers.noBody();
+            hrBuilder.method(method, bodyPublisher);
+        } else {
+            BodyPublisher bodyPublisher = BodyPublishers.ofByteArray(body.getRawBytes());
+            hrBuilder.method(method, bodyPublisher);
+            LOG.info("Adding contenttype: " + body.contentType().getMediaType());
+            hrBuilder.header("Content-Type", body.contentType().getMediaType());
+        }
+
+        if (connectionHolder.getHostHeader().isPresent()) {
+            hrBuilder.header("Host", connectionHolder.getHostHeader().get());
+        }
+
+        if (authorization != null) {
+            hrBuilder.header("Authorization", authorization);
+        }
+
+        byte[] rawBytes = new byte[0];
+        if (body != null) {
+            rawBytes = body.getRawBytes();
+        }
+
+        int statusCode = -1;
+        Response response = null;
+        try {
+            response = client.sendRequest(hrBuilder.build());
+            statusCode = response.getStatusCode();
+            
+            if (response.isSuccessful() && response.getStatusCode() != 204) {
+                return response;
+            }
+
+            ResponseBody responseBody = response.body();
+
+            responseCodeHandler.handle(response.getStatusCode(), responseBody, response::header);
+
+            switch (response.getStatusCode()) {
+                case 204:
+                    throw new NoContentException("No content!");
+                case 401:
+                case 403:
+                    throw new AuthorizationFailedException(response.getStatusCode(), "Authorization failed!");
+                case 404:
+                    throw new NotFoundException("Not found");
+                case 409:
+                    if (response.body() != null) {
+                        throw new ContactManifestMismatchException(readBodyBytes(response.body()));
+                    } else {
+                        throw new ConflictException();
+                    }
+                case 429:
+                    throw new RateLimitException(response.getStatusCode(), "Rate limit exceeded: " + response.getStatusCode());
+                case 499:
+                    throw new DeprecatedVersionException();
+            }
+        } catch (IOException e) {
+            throw new PushNetworkException(e);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        throw new NonSuccessfulResponseCodeException(statusCode, "Response: " + response);
     }
 
     public CallingResponse makeCallingRequest(long requestId, String url, String httpMethod, List<Pair<String, String>> headers, byte[] body) {
