@@ -11,6 +11,7 @@ public class RequestBody {
 
     MediaType mediaType;
     String jsonBody;
+    byte[] raw;
     
     public RequestBody() {
     }
@@ -19,8 +20,18 @@ public class RequestBody {
         this.mediaType = mt;
         this.jsonBody = jb;
     }
+
+    RequestBody(MediaType mt, byte[] raw) {
+        this.mediaType = mt;
+        this.raw = raw;
+    }
+
     public static RequestBody create(MediaType mt, String jsonBody) {
         return new RequestBody(mt, jsonBody);
+    }
+
+    public static RequestBody create(MediaType mt, byte[] raw) {
+        return new RequestBody(mt, raw);
     }
 
     public long contentLength() {
@@ -32,6 +43,7 @@ public class RequestBody {
     }
 
     public byte[] getRawBytes() {
+        if (raw != null) return raw;
         return jsonBody.getBytes();
     }
 

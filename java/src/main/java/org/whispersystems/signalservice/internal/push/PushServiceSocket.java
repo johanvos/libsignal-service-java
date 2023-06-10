@@ -1656,11 +1656,10 @@ public class PushServiceSocket {
     }
 
     private static RequestBody protobufRequestBody(MessageLite protobufBody) {
-                 throw new UnsupportedOperationException("NYI");
 
-//        return protobufBody != null
-//                ? RequestBody.create(MediaType.parse("application/x-protobuf"), protobufBody.toByteArray())
-//                : null;
+        return protobufBody != null
+                ? RequestBody.create(MediaType.parse("application/x-protobuf"), protobufBody.toByteArray())
+                : null;
     }
 
     private ListenableFuture<String> submitServiceRequest(String urlFragment,
@@ -1668,36 +1667,27 @@ public class PushServiceSocket {
             String jsonBody,
             Map<String, String> headers,
             Optional<UnidentifiedAccess> unidentifiedAccessKey) {
-                 throw new UnsupportedOperationException("NYI");
 //
-//        OkHttpClient okHttpClient = buildNetworkClient(unidentifiedAccessKey.isPresent());
-//        byte[] raw = (jsonBody == null ? new byte[0] : jsonBody.getBytes());
-//        Call call = okHttpClient.newCall(buildServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, unidentifiedAccessKey, false), raw);
-//
-//        synchronized (connections) {
-//            connections.add(call);
-//        }
-//
-//        SettableFuture<String> bodyFuture = new SettableFuture<>();
-//
-//        call.enqueue(new Callback() {
-//            @Override
-//            public void onResponse(Call call, Response response) {
-//                try ( ResponseBody body = response.body()) {
-//                    validateServiceResponse(response);
-//                    bodyFuture.set(readBodyString(body));
-//                } catch (IOException e) {
-//                    bodyFuture.setException(e);
-//                }
-//            }
-//
-//            @Override
-//            public void onFailure(Call call, IOException e) {
-//                bodyFuture.setException(e);
-//            }
-//        });
-//
-//        return bodyFuture;
+        NetworkClient client = buildNetworkClient(unidentifiedAccessKey.isPresent());
+        HttpRequest request = buildServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, unidentifiedAccessKey, false);
+
+        SettableFuture<String> bodyFuture = new SettableFuture<>();
+        Thread t = new Thread() {
+            @Override public void run() {
+                try {
+                    Response response = client.sendRequest(request);
+                    validateServiceResponse(response);
+                    ResponseBody body = response.body();
+                    bodyFuture.set(readBodyString(body));
+
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    bodyFuture.setException(t);
+                }
+            }
+        };
+        t.start();
+        return bodyFuture;
     }
 
     private ResponseBody makeServiceBodyRequest(String urlFragment,
@@ -1750,71 +1740,70 @@ public class PushServiceSocket {
 
     private Response validateServiceResponse(Response response)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-          throw new UnsupportedOperationException("NYI");
-//
-//        int responseCode = response.code();
-//        String responseMessage = response.message();
-//
-//        switch (responseCode) {
-//            case 413:
-//            case 429: {
-//                long retryAfterLong = Util.parseLong(response.header("Retry-After"), -1);
-//                Optional<Long> retryAfter = retryAfterLong != -1 ? Optional.of(TimeUnit.SECONDS.toMillis(retryAfterLong)) : Optional.empty();
-//                throw new RateLimitException(responseCode, "Rate limit exceeded: " + responseCode, retryAfter);
-//            }
-//            case 401:
-//            case 403:
-//                throw new AuthorizationFailedException(responseCode, "Authorization failed!");
-//            case 404:
-//                throw new NotFoundException("Not found");
-//            case 409:
-//                MismatchedDevices mismatchedDevices = readResponseJson(response, MismatchedDevices.class);
-//
-//                throw new MismatchedDevicesException(mismatchedDevices);
-//            case 410:
-//                StaleDevices staleDevices = readResponseJson(response, StaleDevices.class);
-//
-//                throw new StaleDevicesException(staleDevices);
-//            case 411:
-//                DeviceLimit deviceLimit = readResponseJson(response, DeviceLimit.class);
-//
-//                throw new DeviceLimitExceededException(deviceLimit);
-//            case 417:
-//                throw new ExpectationFailedException();
-//            case 423:
-//                RegistrationLockFailure accountLockFailure = readResponseJson(response, RegistrationLockFailure.class);
-//                AuthCredentials credentials = accountLockFailure.backupCredentials;
-//                String basicStorageCredentials = credentials != null ? credentials.asBasic() : null;
-//
-//                throw new LockedException(accountLockFailure.length,
-//                        accountLockFailure.timeRemaining,
-//                        basicStorageCredentials);
-//            case 428:
-//                LOG.info("Whoops, PSS got statuscode 428");
-//                ProofRequiredResponse proofRequiredResponse = readResponseJson(response, ProofRequiredResponse.class);
-//                long retryAfter = -1;
-//                try {
-//                    String retryAfterRaw = response.header("Retry-After");
-//                    retryAfter = Util.parseInt(retryAfterRaw, -1);
-//                    LOG.info("Not good, got a HTTP 428 with content " + response.body().string());
-//                } catch (Exception ex) {
-//                    ex.printStackTrace();
-//                    Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
-//                }
-//                throw new ProofRequiredException(proofRequiredResponse, retryAfter);
-//
-//            case 499:
-//                throw new DeprecatedVersionException();
-//
-//            case 508:
-//                throw new ServerRejectedException();
-//        }
-//
-//        if (responseCode != 200 && responseCode != 202 && responseCode != 204) {
-//            throw new NonSuccessfulResponseCodeException(responseCode, "Bad response: " + responseCode + " " + responseMessage);
-//        }
-//
-//        return response;
+
+        int responseCode = response.getStatusCode();
+        String responseMessage = response.message();
+
+        switch (responseCode) {
+            case 413:
+            case 429: {
+                long retryAfterLong = Util.parseLong(response.header("Retry-After"), -1);
+                Optional<Long> retryAfter = retryAfterLong != -1 ? Optional.of(TimeUnit.SECONDS.toMillis(retryAfterLong)) : Optional.empty();
+                throw new RateLimitException(responseCode, "Rate limit exceeded: " + responseCode, retryAfter);
+            }
+            case 401:
+            case 403:
+                throw new AuthorizationFailedException(responseCode, "Authorization failed!");
+            case 404:
+                throw new NotFoundException("Not found");
+            case 409:
+                MismatchedDevices mismatchedDevices = readResponseJson(response, MismatchedDevices.class);
+
+                throw new MismatchedDevicesException(mismatchedDevices);
+            case 410:
+                StaleDevices staleDevices = readResponseJson(response, StaleDevices.class);
+
+                throw new StaleDevicesException(staleDevices);
+            case 411:
+                DeviceLimit deviceLimit = readResponseJson(response, DeviceLimit.class);
+
+                throw new DeviceLimitExceededException(deviceLimit);
+            case 417:
+                throw new ExpectationFailedException();
+            case 423:
+                RegistrationLockFailure accountLockFailure = readResponseJson(response, RegistrationLockFailure.class);
+                AuthCredentials credentials = accountLockFailure.backupCredentials;
+                String basicStorageCredentials = credentials != null ? credentials.asBasic() : null;
+
+                throw new LockedException(accountLockFailure.length,
+                        accountLockFailure.timeRemaining,
+                        basicStorageCredentials);
+            case 428:
+                LOG.info("Whoops, PSS got statuscode 428");
+                ProofRequiredResponse proofRequiredResponse = readResponseJson(response, ProofRequiredResponse.class);
+                long retryAfter = -1;
+                try {
+                    String retryAfterRaw = response.header("Retry-After");
+                    retryAfter = Util.parseInt(retryAfterRaw, -1);
+                    LOG.info("Not good, got a HTTP 428 with content " + response.body().string());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                throw new ProofRequiredException(proofRequiredResponse, retryAfter);
+
+            case 499:
+                throw new DeprecatedVersionException();
+
+            case 508:
+                throw new ServerRejectedException();
+        }
+
+        if (responseCode != 200 && responseCode != 202 && responseCode != 204) {
+            throw new NonSuccessfulResponseCodeException(responseCode, "Bad response: " + responseCode + " " + responseMessage);
+        }
+
+        return response;
     }
 
 //    private Response getGrpcConnection(String urlFragment, String method, byte[] body, Map headers) {

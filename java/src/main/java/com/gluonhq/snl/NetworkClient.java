@@ -1,6 +1,6 @@
 package com.gluonhq.snl;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ByteString;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -12,6 +12,12 @@ import java.net.http.HttpResponse.BodySubscribers;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
@@ -22,15 +28,26 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.exceptions.ServerRejectedException;
 import org.whispersystems.signalservice.api.util.CredentialsProvider;
 import org.whispersystems.signalservice.internal.configuration.SignalUrl;
+import org.whispersystems.signalservice.internal.push.GroupMismatchedDevices;
 import org.whispersystems.signalservice.internal.push.SendGroupMessageResponse;
+import org.whispersystems.signalservice.internal.push.exceptions.GroupMismatchedDevicesException;
+import org.whispersystems.signalservice.internal.util.JsonUtil;
+import org.whispersystems.signalservice.internal.util.Util;
+import org.whispersystems.signalservice.internal.util.concurrent.FutureTransformers;
+import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
+import org.whispersystems.signalservice.internal.util.concurrent.SettableFuture;
 import org.whispersystems.signalservice.internal.websocket.WebSocketProtos;
 import org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage;
 import org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage;
+import org.whispersystems.signalservice.internal.websocket.WebsocketResponse;
+import org.whispersystems.util.Base64;
 
 /**
  *
@@ -48,9 +65,15 @@ public class NetworkClient {
     private BlockingQueue<byte[]> rawByteQueue = new LinkedBlockingQueue<>();
     private BlockingQueue<WebSocketRequestMessage> wsRequestMessageQueue = new LinkedBlockingQueue<>();
     private BlockingQueue<SignalServiceEnvelope> envelopeQueue = new LinkedBlockingQueue<>();
+
+    private final Map<Long, OutgoingRequest> outgoingRequests = new HashMap<>();
+
     private Thread formatProcessingThread;
+    KeepAliveSender keepAliveSender;
+
     private boolean closed = false;
     private static final String SERVER_DELIVERED_TIMESTAMP_HEADER = "X-Signal-Timestamp";
+    private static final int KEEPALIVE_TIMEOUT_SECONDS = 55;
 
     public NetworkClient(SignalUrl url, String agent, boolean allowStories) {
         this(url, Optional.empty(), agent, allowStories);
@@ -128,13 +151,65 @@ public class NetworkClient {
 
     }
 
+    private synchronized void sendKeepAlive() throws IOException {
+        byte[] message = WebSocketMessage.newBuilder()
+                .setType(WebSocketMessage.Type.REQUEST)
+                .setRequest(WebSocketRequestMessage.newBuilder()
+                        .setId(System.currentTimeMillis())
+                        .setPath("/v1/keepalive")
+                        .setVerb("GET")
+                        .build()).build()
+                .toByteArray();
+        this.webSocket.sendBinary(ByteBuffer.wrap(message), true);
+    }
+
     public void shutdown() {
         this.closed = true;
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public Future<SendGroupMessageResponse> sendToGroup(byte[] ciphertext, byte[] joinedUnidentifiedAccess, long timestamp, boolean online) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public Future<SendGroupMessageResponse> sendToGroup(byte[] body, byte[] joinedUnidentifiedAccess, long timestamp, boolean online) {
+        List<String> headers = new LinkedList<String>() {
+            {
+                add("content-type:application/vnd.signal-messenger.mrm");
+                add("Unidentified-Access-Key:" + Base64.encodeBytes(joinedUnidentifiedAccess));
+            }
+        };
+        String path = String.format(Locale.US, "/v1/messages/multi_recipient?ts=%s&online=%s", timestamp, online);
+        LOG.info("Sending groupmessage to "+path);
+        WebSocketRequestMessage requestMessage = WebSocketRequestMessage.newBuilder()
+                .setId(new SecureRandom().nextLong())
+                .setVerb("PUT")
+                .setPath(path)
+                .addAllHeaders(headers)
+                .setBody(ByteString.copyFrom(body))
+                .build();
+
+        ListenableFuture<WebsocketResponse> response = sendRequest(requestMessage);
+
+        ListenableFuture<SendGroupMessageResponse> answer = FutureTransformers.map(response, value -> {
+            if (value.getStatus() == 404) {
+                System.err.println("ERROR: sendGroup -> 404");
+                Thread.dumpStack();
+                throw new IOException();
+            } else if (value.getStatus() == 409) {
+                GroupMismatchedDevices[] mismatchedDevices = JsonUtil.fromJsonResponse(value.getBody(), GroupMismatchedDevices[].class);
+                throw new GroupMismatchedDevicesException(mismatchedDevices);
+//        throw new UnregisteredUserException(list.getDestination(), new NotFoundException("not found"));
+            } else if (value.getStatus() == 508) {
+                throw new ServerRejectedException();
+            } else if (value.getStatus() < 200 || value.getStatus() >= 300) {
+                System.err.println("will throw IOexception, response = " + value.getBody());
+                throw new IOException("Non-successful response: " + value.getStatus());
+            }
+
+            if (Util.isEmpty(value.getBody())) {
+                return new SendGroupMessageResponse();
+            } else {
+                return JsonUtil.fromJson(value.getBody(), SendGroupMessageResponse.class);
+            }
+        });
+        return answer;
     }
 
     public boolean isConnected() {
@@ -257,6 +332,15 @@ public class NetworkClient {
                 if (message.getType() == WebSocketMessage.Type.REQUEST) {
                     LOG.info("Add request message to queue");
                     wsRequestMessageQueue.put(message.getRequest());
+                } else if (message.getType() == WebSocketMessage.Type.RESPONSE) {
+                    OutgoingRequest listener = outgoingRequests.get(message.getResponse().getId());
+                    LOG.info("incoming message is response for request with id " + message.getResponse().getId() + " and listener = " + listener);
+                    if (listener != null) {
+                        listener.getResponseFuture().set(
+                                new WebsocketResponse(message.getResponse().getStatus(),
+                                        new String(message.getResponse().getBody().toByteArray()),
+                                        message.getResponse().getHeadersList()));
+                    }
                 }
             } catch (Throwable t) {
                 t.printStackTrace();
@@ -290,6 +374,16 @@ public class NetworkClient {
     public Response sendRequest(HttpRequest request) throws IOException, InterruptedException {
         HttpResponse httpResponse = this.httpClient.send(request, createBodyHandler());
         return new Response(httpResponse);
+    }
+
+    public synchronized ListenableFuture<WebsocketResponse> sendRequest(WebSocketRequestMessage request) {
+        WebSocketMessage message = WebSocketMessage.newBuilder()
+                .setType(WebSocketMessage.Type.REQUEST)
+                .setRequest(request).build();
+        SettableFuture<WebsocketResponse> future = new SettableFuture<>();
+        outgoingRequests.put(request.getId(), new OutgoingRequest(future, System.currentTimeMillis()));
+        webSocket.sendBinary(ByteBuffer.wrap(message.toByteArray()), true);
+        return future;
     }
 
     class MyWebsocketListener implements WebSocket.Listener {
@@ -354,6 +448,8 @@ public class NetworkClient {
                 LOG.info("notified listener1");
                 java.net.http.WebSocket.Listener.super.onOpen(webSocket);
                 System.err.println("notified listener2");
+                KeepAliveSender keepAliveSender = new KeepAliveSender();
+                keepAliveSender.start();
             } catch (Throwable e) {
                 e.printStackTrace();
                 LOG.log(Level.SEVERE, "error in onopen", e);
@@ -361,4 +457,49 @@ public class NetworkClient {
 
         }
     }
+
+    private class KeepAliveSender extends Thread {
+
+        private AtomicBoolean stop = new AtomicBoolean(false);
+
+        public void run() {
+            while (!stop.get()) {
+                try {
+                    Thread.sleep(TimeUnit.SECONDS.toMillis(KEEPALIVE_TIMEOUT_SECONDS));
+
+                    LOG.finest("Sending keep alive for " + this);
+                    sendKeepAlive();
+                } catch (Throwable e) {
+                    LOG.info("FAILED Sending keep alive for " + this);
+                    LOG.log(Level.SEVERE, "error in keepalive", e);
+                }
+            }
+            LOG.info("No more keepalives for " + this);
+        }
+
+        public void shutdown() {
+            LOG.info("Requesting to stop keep alive for " + this);
+            stop.set(true);
+        }
+    }
+
+    private static class OutgoingRequest {
+
+        private final SettableFuture<WebsocketResponse> responseFuture;
+        private final long startTimestamp;
+
+        private OutgoingRequest(SettableFuture<WebsocketResponse> future, long startTimestamp) {
+            this.responseFuture = future;
+            this.startTimestamp = startTimestamp;
+        }
+
+        SettableFuture<WebsocketResponse> getResponseFuture() {
+            return responseFuture;
+        }
+
+        long getStartTimestamp() {
+            return startTimestamp;
+        }
+    }
+
 }

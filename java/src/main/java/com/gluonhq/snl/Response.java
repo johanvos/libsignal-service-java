@@ -38,4 +38,8 @@ public class Response<T> {
         return httpAnswer.statusCode();
     }
 
+    public String message() {
+        return "RENAME ME TO GETMESSAGE!";
+    }
+
 }
