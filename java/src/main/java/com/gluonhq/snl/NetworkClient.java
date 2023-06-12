@@ -325,8 +325,13 @@ public class NetworkClient {
 //                .setMessage(ByteString.copyFrom(response.body().getBytes()))
 //                .setStatuscode(response.statusCode())
 //                .build();
-byte[] raw = sReply.getMessage().toByteArray();
-Response<byte[]> answer = new Response<>(raw, sReply.getStatuscode());
+        ByteString message = sReply.getMessage();
+        LOG.info("Got message, "+message);
+        LOG.info("Size = "+message.size());
+        
+        byte[] raw = sReply.getMessage().toByteArray();
+        LOG.info("RawSize = "+raw.length);
+        Response<byte[]> answer = new Response<>(raw, sReply.getStatuscode());
 //                LOG.info("Length of answer = " + sReply.getMessage().length);
         return answer;
     }

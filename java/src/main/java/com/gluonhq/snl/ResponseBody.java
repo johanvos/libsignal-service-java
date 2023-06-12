@@ -13,7 +13,9 @@ public class ResponseBody<T> {
     }
 
     public String string() {
-        return (String)body;
+        if (body instanceof String bs) return bs;
+        if (body instanceof byte[] rb) return new String(rb);
+        throw new IllegalArgumentException ("Can't convert "+body+" to string");
     }
 
     public byte[] bytes() {
