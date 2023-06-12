@@ -9,15 +9,18 @@ import java.util.List;
  */
 public class Response<T> {
 
-    private HttpResponse<T> httpAnswer;
+  //  private HttpResponse<T> httpAnswer;
+    private final int statusCode;
     T body;
 
-    public Response(byte[] rawBytes) {
+    public Response(byte[] rawBytes, int statusCode) {
         this.body = (T)rawBytes;
+        this.statusCode = statusCode;
     }
     public Response(HttpResponse<T> httpAnswer) {
-        this.httpAnswer = httpAnswer;
+     //   this.httpAnswer = httpAnswer;
         this.body = httpAnswer.body();
+        this.statusCode = httpAnswer.statusCode();
         System.err.println("Got response "+httpAnswer.body());
     }
 
@@ -34,12 +37,11 @@ public class Response<T> {
 
     }
     public boolean isSuccessful() {
-        int sc = httpAnswer.statusCode();
-        return ((sc >= 200) && (sc < 300));
+        return ((statusCode >= 200) && (statusCode < 300));
     }
 
     public int getStatusCode() {
-        return httpAnswer.statusCode();
+        return statusCode;
     }
 
     public String message() {

@@ -326,7 +326,7 @@ public class NetworkClient {
 //                .setStatuscode(response.statusCode())
 //                .build();
 byte[] raw = sReply.getMessage().toByteArray();
-Response<byte[]> answer = new Response<>(raw);
+Response<byte[]> answer = new Response<>(raw, sReply.getStatuscode());
 //                LOG.info("Length of answer = " + sReply.getMessage().length);
         return answer;
     }
@@ -399,11 +399,10 @@ Response<byte[]> answer = new Response<>(raw);
         return mbh;
     }
 
-    public Response sendRequest(HttpRequest request) throws IOException, InterruptedException {
+    public Response sendRequest(HttpRequest request, byte[] raw) throws IOException, InterruptedException {
        LOG.info("Send request, using kwik");
         URI uri = request.uri();
         String method = request.method();
-        byte[] raw = new byte[0];
         Map headers = request.headers().map();
         Response answer = getKwikResponse(uri, method, raw, headers);
         LOG.info("Got request, using kwik");

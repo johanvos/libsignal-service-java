@@ -1313,7 +1313,7 @@ public class PushServiceSocket {
             builder.header("Range", "bytes=" + offset + "-");
         }
         try {
-            Response response = client.sendRequest(builder.build());
+            Response response = client.sendRequest(builder.build(), new byte[0]);
 
             if (response.isSuccessful()) {
                 ResponseBody body = response.body();
@@ -1669,13 +1669,15 @@ public class PushServiceSocket {
             Optional<UnidentifiedAccess> unidentifiedAccessKey) {
 //
         NetworkClient client = buildNetworkClient(unidentifiedAccessKey.isPresent());
-        HttpRequest request = buildServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, unidentifiedAccessKey, false);
+        RequestBody rb = jsonRequestBody(jsonBody);
+        HttpRequest request = buildServiceRequest(urlFragment, method, rb, headers, unidentifiedAccessKey, false);
 
         SettableFuture<String> bodyFuture = new SettableFuture<>();
         Thread t = new Thread() {
             @Override public void run() {
                 try {
-                    Response response = client.sendRequest(request);
+                    byte[] rawBytes= (rb == null? new byte[0] : rb.getRawBytes());
+                    Response response = client.sendRequest(request, rawBytes);
                     validateServiceResponse(response);
                     ResponseBody body = response.body();
                     bodyFuture.set(readBodyString(body));
@@ -1840,7 +1842,8 @@ public class PushServiceSocket {
         try {
             HttpRequest serviceRequest = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
             NetworkClient client = buildNetworkClient(unidentifiedAccess.isPresent());
-            Response answer = client.sendRequest(serviceRequest);
+            byte[] rawBytes = (body == null? new byte[0] : body.getRawBytes());
+            Response answer = client.sendRequest(serviceRequest, rawBytes);
             return answer;
         } catch (IOException | InterruptedException ex) {
             Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
@@ -2048,7 +2051,7 @@ public class PushServiceSocket {
         int statusCode = -1;
         Response response = null;
         try {
-            response = client.sendRequest(hrBuilder.build());
+            response = client.sendRequest(hrBuilder.build(), rawBytes);
             statusCode = response.getStatusCode();
             
             if (response.isSuccessful() && response.getStatusCode() != 204) {
