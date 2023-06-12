@@ -10,15 +10,19 @@ import java.util.List;
 public class Response<T> {
 
     private HttpResponse<T> httpAnswer;
+    T body;
 
+    public Response(byte[] rawBytes) {
+        this.body = (T)rawBytes;
+    }
     public Response(HttpResponse<T> httpAnswer) {
         this.httpAnswer = httpAnswer;
+        this.body = httpAnswer.body();
         System.err.println("Got response "+httpAnswer.body());
     }
 
     public ResponseBody<T> body() {
-        T realBody = httpAnswer.body();
-        return new ResponseBody(realBody);
+        return new ResponseBody(body);
     }
 
     public List<String> headers(String setCookie) {

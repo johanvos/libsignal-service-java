@@ -1,6 +1,9 @@
 package com.gluonhq.snl;
 
 import com.google.protobuf.ByteString;
+import io.privacyresearch.grpcproxy.SignalRpcMessage;
+import io.privacyresearch.grpcproxy.SignalRpcReply;
+import io.privacyresearch.grpcproxy.client.KwikSender;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -303,6 +306,31 @@ public class NetworkClient {
         }
     }
 
+    private Response getKwikResponse(URI uri, String method, byte[] body, Map<String, List<String>> headers) throws IOException {
+        SignalRpcMessage.Builder requestBuilder = SignalRpcMessage.newBuilder();
+        requestBuilder.setUrlfragment(uri.toString());
+        requestBuilder.setBody(ByteString.copyFrom(body));
+        headers.entrySet().forEach(header -> {
+            header.getValue().forEach(hdr -> {
+                requestBuilder.addHeader(header.getKey() + "=" + hdr);
+            });
+        });
+        requestBuilder.setMethod(method);
+        LOG.info("Getting ready to send DM to kwikproxy");
+        KwikSender kwikSender = new KwikSender();
+        SignalRpcReply sReply = kwikSender.sendSignalMessage(requestBuilder.build());
+        LOG.info("Statuscode = " + sReply.getStatuscode());
+//        
+//                SignalRpcReply reply = SignalRpcReply.newBuilder()
+//                .setMessage(ByteString.copyFrom(response.body().getBytes()))
+//                .setStatuscode(response.statusCode())
+//                .build();
+byte[] raw = sReply.getMessage().toByteArray();
+Response<byte[]> answer = new Response<>(raw);
+//                LOG.info("Length of answer = " + sReply.getMessage().length);
+        return answer;
+    }
+
     private static Optional<String> findHeader(WebSocketRequestMessage message, String targetHeader) {
         if (message.getHeadersCount() == 0) {
             return Optional.empty();
@@ -372,8 +400,16 @@ public class NetworkClient {
     }
 
     public Response sendRequest(HttpRequest request) throws IOException, InterruptedException {
-        HttpResponse httpResponse = this.httpClient.send(request, createBodyHandler());
-        return new Response(httpResponse);
+       LOG.info("Send request, using kwik");
+        URI uri = request.uri();
+        String method = request.method();
+        byte[] raw = new byte[0];
+        Map headers = request.headers().map();
+        Response answer = getKwikResponse(uri, method, raw, headers);
+        LOG.info("Got request, using kwik");
+        return answer;
+     //   HttpResponse httpResponse = this.httpClient.send(request, createBodyHandler());
+     //   return new Response(httpResponse);
     }
 
     public synchronized ListenableFuture<WebsocketResponse> sendRequest(WebSocketRequestMessage request) {
