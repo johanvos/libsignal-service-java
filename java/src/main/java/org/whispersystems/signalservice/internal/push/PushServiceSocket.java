@@ -1362,9 +1362,9 @@ public class PushServiceSocket {
                 .addFormDataPart("x-amz-signature", signature)
                 .addFormDataPart("file", "file", file)
                 .build();
-
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(connectionHolder.getUrl() + "/" + path))
+                .header("Content-Type", requestBody.contentType().getMediaType())
                 .POST(requestBody.getBodyPublisher());
 
         if (connectionHolder.getHostHeader().isPresent()) {
