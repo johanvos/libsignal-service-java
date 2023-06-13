@@ -624,41 +624,41 @@ public class SignalServiceMessageSender {
 
     private SignalServiceAttachmentPointer uploadAttachmentV2(SignalServiceAttachmentStream attachment, byte[] attachmentKey, PushAttachmentData attachmentData)
             throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-throw new UnsupportedOperationException("NYI");
-//        AttachmentV2UploadAttributes v2UploadAttributes = null;
-//        Optional<SignalServiceMessagePipe> localPipe = pipe.get();
-//
-//        if (localPipe.isPresent()) {
-//            Log.d(TAG, "Using pipe to retrieve attachment upload attributes...");
-//            try {
-//                v2UploadAttributes = localPipe.get().getAttachmentV2UploadAttributes();
-//            } catch (IOException e) {
-//                Log.w(TAG, "Failed to retrieve attachment upload attributes using pipe. Falling back...");
-//            }
-//        }
-//
-//        if (v2UploadAttributes == null) {
-//            Log.d(TAG, "Not using pipe to retrieve attachment upload attributes...");
-//            v2UploadAttributes = socket.getAttachmentV2UploadAttributes();
-//        }
-//
-//        Pair<Long, byte[]> attachmentIdAndDigest = socket.uploadAttachment(attachmentData, v2UploadAttributes);
-//
-//        return new SignalServiceAttachmentPointer(0,
-//                new SignalServiceAttachmentRemoteId(attachmentIdAndDigest.first()),
-//                attachment.getContentType(),
-//                attachmentKey,
-//                Optional.of(Util.toIntExact(attachment.getLength())),
-//                attachment.getPreview(),
-//                attachment.getWidth(), attachment.getHeight(),
-//                Optional.of(attachmentIdAndDigest.second()),
-//                attachment.getFileName(),
-//                attachment.getVoiceNote(),
-//                attachment.isBorderless(),
-//                attachment.isGif(),
-//                attachment.getCaption(),
-//                attachment.getBlurHash(),
-//                attachment.getUploadTimestamp());
+//throw new UnsupportedOperationException("NYI");
+        AttachmentV2UploadAttributes v2UploadAttributes = null;
+        Optional<SignalServiceMessagePipe> localPipe = Optional.empty();
+
+        if (localPipe.isPresent()) {
+            Log.d(TAG, "Using pipe to retrieve attachment upload attributes...");
+            try {
+                v2UploadAttributes = localPipe.get().getAttachmentV2UploadAttributes();
+            } catch (IOException e) {
+                Log.w(TAG, "Failed to retrieve attachment upload attributes using pipe. Falling back...");
+            }
+        }
+
+        if (v2UploadAttributes == null) {
+            Log.d(TAG, "Not using pipe to retrieve attachment upload attributes...");
+            v2UploadAttributes = socket.getAttachmentV2UploadAttributes();
+        }
+
+        Pair<Long, byte[]> attachmentIdAndDigest = socket.uploadAttachment(attachmentData, v2UploadAttributes);
+
+        return new SignalServiceAttachmentPointer(0,
+                new SignalServiceAttachmentRemoteId(attachmentIdAndDigest.first()),
+                attachment.getContentType(),
+                attachmentKey,
+                Optional.of(Util.toIntExact(attachment.getLength())),
+                attachment.getPreview(),
+                attachment.getWidth(), attachment.getHeight(),
+                Optional.of(attachmentIdAndDigest.second()),
+                attachment.getFileName(),
+                attachment.getVoiceNote(),
+                attachment.isBorderless(),
+                attachment.isGif(),
+                attachment.getCaption(),
+                attachment.getBlurHash(),
+                attachment.getUploadTimestamp());
     }
 
     public ResumableUploadSpec getResumableUploadSpec() throws IOException {

@@ -166,6 +166,7 @@ import com.gluonhq.snl.NetworkClient;
 import com.gluonhq.snl.Response;
 import com.gluonhq.snl.ResponseBody;
 import com.gluonhq.snl.doubt.MediaType;
+import com.gluonhq.snl.doubt.MultipartBody;
 import java.net.http.HttpResponse;
 
 import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation;
@@ -1343,37 +1344,41 @@ public class PushServiceSocket {
             OutputStreamFactory outputStreamFactory, ProgressListener progressListener,
             CancelationSignal cancelationSignal)
             throws PushNetworkException, NonSuccessfulResponseCodeException {
-              throw new UnsupportedOperationException("NYI");
-//
-//        ConnectionHolder connectionHolder = getRandom(cdnClientsMap.get(0), random);
-//        OkHttpClient okHttpClient = connectionHolder.getClient()
-//                .newBuilder()
-//                .connectTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-//                .readTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-//                .build();
-//
-//        DigestingRequestBody file = new DigestingRequestBody(data, outputStreamFactory, contentType, length, progressListener, cancelationSignal, 0);
-//
-//        RequestBody requestBody = new MultipartBody.Builder()
-//                .setType(MultipartBody.FORM)
-//                .addFormDataPart("acl", acl)
-//                .addFormDataPart("key", key)
-//                .addFormDataPart("policy", policy)
-//                .addFormDataPart("Content-Type", contentType)
-//                .addFormDataPart("x-amz-algorithm", algorithm)
-//                .addFormDataPart("x-amz-credential", credential)
-//                .addFormDataPart("x-amz-date", date)
-//                .addFormDataPart("x-amz-signature", signature)
-//                .addFormDataPart("file", "file", file)
-//                .build();
-//
-//        Request.Builder request = new Request.Builder()
-//                .url(connectionHolder.getUrl() + "/" + path)
-//                .post(requestBody);
-//
-//        if (connectionHolder.getHostHeader().isPresent()) {
-//            request.addHeader("Host", connectionHolder.getHostHeader().get());
-//        }
+
+        ConnectionHolder connectionHolder = getRandom(cdnClientsMap.get(0), random);
+        NetworkClient client = connectionHolder.getClient();
+
+        DigestingRequestBody file = new DigestingRequestBody(data, outputStreamFactory, contentType, length, progressListener, cancelationSignal, 0);
+
+        MultipartBody.MultiPartRequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("acl", acl)
+                .addFormDataPart("key", key)
+                .addFormDataPart("policy", policy)
+                .addFormDataPart("Content-Type", contentType)
+                .addFormDataPart("x-amz-algorithm", algorithm)
+                .addFormDataPart("x-amz-credential", credential)
+                .addFormDataPart("x-amz-date", date)
+                .addFormDataPart("x-amz-signature", signature)
+                .addFormDataPart("file", "file", file)
+                .build();
+
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(connectionHolder.getUrl() + "/" + path))
+                .POST(requestBody.getBodyPublisher());
+
+        if (connectionHolder.getHostHeader().isPresent()) {
+            requestBuilder.header("Host", connectionHolder.getHostHeader().get());
+        }
+        HttpRequest request = requestBuilder.build();
+        try {
+            client.sendRequest(request, new byte[0]);
+        } catch (IOException | InterruptedException ex) {
+            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
+            throw new PushNetworkException(ex);
+        }
+        return file.getTransmittedDigest();
+
 //
 //        Call call = okHttpClient.newCall(request.build());
 //

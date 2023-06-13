@@ -58,6 +58,7 @@ import org.whispersystems.util.Base64;
  */
 public class NetworkClient {
 
+    boolean useQuic = false;
     final HttpClient httpClient;
     final SignalUrl signalUrl;
     final String signalAgent;
@@ -317,14 +318,9 @@ public class NetworkClient {
         });
         requestBuilder.setMethod(method);
         LOG.info("Getting ready to send DM to kwikproxy");
-        KwikSender kwikSender = new KwikSender();
+        KwikSender kwikSender = new KwikSender("swave://grpcproxy.gluonhq.net:7443");
         SignalRpcReply sReply = kwikSender.sendSignalMessage(requestBuilder.build());
         LOG.info("Statuscode = " + sReply.getStatuscode());
-//        
-//                SignalRpcReply reply = SignalRpcReply.newBuilder()
-//                .setMessage(ByteString.copyFrom(response.body().getBytes()))
-//                .setStatuscode(response.statusCode())
-//                .build();
         ByteString message = sReply.getMessage();
         LOG.info("Got message, "+message);
         LOG.info("Size = "+message.size());
@@ -405,15 +401,23 @@ public class NetworkClient {
     }
 
     public Response sendRequest(HttpRequest request, byte[] raw) throws IOException, InterruptedException {
-       LOG.info("Send request, using kwik");
-        URI uri = request.uri();
-        String method = request.method();
-        Map headers = request.headers().map();
-        Response answer = getKwikResponse(uri, method, raw, headers);
-        LOG.info("Got request, using kwik");
-        return answer;
-     //   HttpResponse httpResponse = this.httpClient.send(request, createBodyHandler());
-     //   return new Response(httpResponse);
+        if (useQuic) {
+            LOG.info("Send request, using kwik");
+            URI uri = request.uri();
+            String method = request.method();
+            Map headers = request.headers().map();
+            Response answer = getKwikResponse(uri, method, raw, headers);
+            LOG.info("Got request, using kwik");
+            return answer;
+        } else {
+            LOG.info("Send request, not using kwik");
+            return getDirectResponse(request);
+        }
+    }
+
+    private Response getDirectResponse(HttpRequest request) throws IOException, InterruptedException {
+        HttpResponse httpResponse = this.httpClient.send(request, createBodyHandler());
+        return new Response(httpResponse);
     }
 
     public synchronized ListenableFuture<WebsocketResponse> sendRequest(WebSocketRequestMessage request) {

@@ -10,7 +10,10 @@ import java.io.InputStream;
 
 import com.gluonhq.snl.doubt.MediaType;
 import com.gluonhq.snl.doubt.RequestBody;
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 //import okio.BufferedSink;
 
 public class DigestingRequestBody extends RequestBody {
@@ -83,6 +86,20 @@ public class DigestingRequestBody extends RequestBody {
   public byte[] getTransmittedDigest() {
     return digest;
   }
+
+    @Override
+    public byte[] getRawBytes() {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      try {
+          writeTo(baos);
+          baos.flush();
+          baos.close();
+          return baos.toByteArray();
+      } catch (IOException ex) {
+          Logger.getLogger(DigestingRequestBody.class.getName()).log(Level.SEVERE, null, ex);
+          throw new IllegalArgumentException(ex);
+      }
+    }
 //
 //    @Override
 //    public HttpRequest.BodyPublisher getBodyPublisher() {
