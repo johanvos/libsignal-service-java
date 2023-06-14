@@ -623,7 +623,7 @@ public class SignalServiceMessageSender {
     }
 
     private SignalServiceAttachmentPointer uploadAttachmentV2(SignalServiceAttachmentStream attachment, byte[] attachmentKey, PushAttachmentData attachmentData)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, IOException, MalformedResponseException {
 //throw new UnsupportedOperationException("NYI");
         AttachmentV2UploadAttributes v2UploadAttributes = null;
         Optional<SignalServiceMessagePipe> localPipe = Optional.empty();
@@ -1938,36 +1938,36 @@ public class SignalServiceMessageSender {
                 } else if (content.getContent().isPresent() && content.getContent().get().hasSenderKeyDistributionMessage()) {
                     LOG.info("Sending a SKDM to " + messages.getDestination() + " for devices: " + messages.getDevices());
                 }
-
-                if (cancelationSignal != null && cancelationSignal.isCanceled()) {
-                    throw new CancelationException();
-                }
-
-                if (!unidentifiedAccess.isPresent()) {
-                    try {
-                        SendMessageResponse response = socket.sendMessage(messages, unidentifiedAccess, story);
-                        return SendMessageResult.success(recipient, messages.getDevices(), false, response.getNeedsSync() || aciStore.isMultiDevice(), System.currentTimeMillis() - startTime, content.getContent());
-                    } catch (InvalidUnidentifiedAccessHeaderException | UnregisteredUserException | MismatchedDevicesException | StaleDevicesException e) {
-                        throw e;
-                    } catch (IOException e) {
-                        Log.w(TAG, e);
-                        Log.w(TAG, "[sendMessage][" + timestamp + "] Pipe failed, falling back... (" + e.getClass().getSimpleName() + ": " + e.getMessage() + ")");
-                    }
-                } else if (unidentifiedAccess.isPresent()) {
-                    try {
-                        SendMessageResponse response = socket.sendMessage(messages, unidentifiedAccess, story);
-                        return SendMessageResult.success(recipient, messages.getDevices(), true, response.getNeedsSync() || aciStore.isMultiDevice(), System.currentTimeMillis() - startTime, content.getContent());
-                    } catch (InvalidUnidentifiedAccessHeaderException | UnregisteredUserException | MismatchedDevicesException | StaleDevicesException e) {
-                        throw e;
-                    }  catch (IOException e) {
-                        Log.w(TAG, e);
-                        Log.w(TAG, "[sendMessage][" + timestamp + "] Unidentified pipe failed, falling back...");
-                    }
-                }
-
-                if (cancelationSignal != null && cancelationSignal.isCanceled()) {
-                    throw new CancelationException();
-                }
+//
+//                if (cancelationSignal != null && cancelationSignal.isCanceled()) {
+//                    throw new CancelationException();
+//                }
+//
+//                if (!unidentifiedAccess.isPresent()) {
+//                    try {
+//                        SendMessageResponse response = socket.sendMessage(messages, unidentifiedAccess, story);
+//                        return SendMessageResult.success(recipient, messages.getDevices(), false, response.getNeedsSync() || aciStore.isMultiDevice(), System.currentTimeMillis() - startTime, content.getContent());
+//                    } catch (InvalidUnidentifiedAccessHeaderException | UnregisteredUserException | MismatchedDevicesException | StaleDevicesException e) {
+//                        throw e;
+//                    } catch (IOException e) {
+//                        Log.w(TAG, e);
+//                        Log.w(TAG, "[sendMessage][" + timestamp + "] Pipe failed, falling back... (" + e.getClass().getSimpleName() + ": " + e.getMessage() + ")");
+//                    }
+//                } else if (unidentifiedAccess.isPresent()) {
+//                    try {
+//                        SendMessageResponse response = socket.sendMessage(messages, unidentifiedAccess, story);
+//                        return SendMessageResult.success(recipient, messages.getDevices(), true, response.getNeedsSync() || aciStore.isMultiDevice(), System.currentTimeMillis() - startTime, content.getContent());
+//                    } catch (InvalidUnidentifiedAccessHeaderException | UnregisteredUserException | MismatchedDevicesException | StaleDevicesException e) {
+//                        throw e;
+//                    }  catch (IOException e) {
+//                        Log.w(TAG, e);
+//                        Log.w(TAG, "[sendMessage][" + timestamp + "] Unidentified pipe failed, falling back...");
+//                    }
+//                }
+//
+//                if (cancelationSignal != null && cancelationSignal.isCanceled()) {
+//                    throw new CancelationException();
+//                }
 
                 SendMessageResponse response = socket.sendMessage(messages, unidentifiedAccess, story);
                 return SendMessageResult.success(recipient, messages.getDevices(), unidentifiedAccess.isPresent(), response.getNeedsSync() || aciStore.isMultiDevice(), System.currentTimeMillis() - startTime, content.getContent());
@@ -1985,11 +1985,17 @@ public class SignalServiceMessageSender {
                     throw afe;
                 }
             } catch (MismatchedDevicesException mde) {
+                LOG.info("Got MMDE, will handle it now");
                 Log.w(TAG, mde);
                 handleMismatchedDevices(socket, recipient, mde.getMismatchedDevices());
             } catch (StaleDevicesException ste) {
                 Log.w(TAG, ste);
                 handleStaleDevices(recipient, ste.getStaleDevices());
+            }
+            catch(Throwable t) {
+                LOG.info("CATCHING a throwable.");
+                        LOG.info("t = "+t);
+                        t.printStackTrace();
             }
         }
 

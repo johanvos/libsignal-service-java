@@ -1,5 +1,6 @@
 package com.gluonhq.snl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.ByteString;
 import io.privacyresearch.grpcproxy.SignalRpcMessage;
 import io.privacyresearch.grpcproxy.SignalRpcReply;
@@ -34,13 +35,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.signal.libsignal.protocol.logging.Log;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.exceptions.MalformedResponseException;
+import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
 import org.whispersystems.signalservice.api.push.exceptions.ServerRejectedException;
 import org.whispersystems.signalservice.api.util.CredentialsProvider;
 import org.whispersystems.signalservice.internal.configuration.SignalUrl;
 import org.whispersystems.signalservice.internal.push.GroupMismatchedDevices;
+import org.whispersystems.signalservice.internal.push.MismatchedDevices;
 import org.whispersystems.signalservice.internal.push.SendGroupMessageResponse;
 import org.whispersystems.signalservice.internal.push.exceptions.GroupMismatchedDevicesException;
+import org.whispersystems.signalservice.internal.push.exceptions.MismatchedDevicesException;
 import org.whispersystems.signalservice.internal.util.JsonUtil;
 import org.whispersystems.signalservice.internal.util.Util;
 import org.whispersystems.signalservice.internal.util.concurrent.FutureTransformers;
@@ -231,7 +237,7 @@ public class NetworkClient {
         try {
             while (true) { // we only return existing envelopes
                 LOG.info("Wait for requestMessage...");
-                WebSocketRequestMessage request = wsRequestMessageQueue.poll(timeout, unit);
+                WebSocketRequestMessage request = wsRequestMessageQueue.take();//poll(timeout, unit);
                 LOG.info("Got requestMessage, process now " + request);
                 Optional<SignalServiceEnvelope> sse = handleWebSocketRequestMessage(request);
                 if (sse.isPresent()) {
@@ -400,7 +406,8 @@ public class NetworkClient {
         return mbh;
     }
 
-    public Response sendRequest(HttpRequest request, byte[] raw) throws IOException, InterruptedException {
+    public Response sendRequest(HttpRequest request, byte[] raw) throws IOException {
+        Response response;
         if (useQuic) {
             LOG.info("Send request, using kwik");
             URI uri = request.uri();
@@ -408,15 +415,32 @@ public class NetworkClient {
             Map headers = request.headers().map();
             Response answer = getKwikResponse(uri, method, raw, headers);
             LOG.info("Got request, using kwik");
-            return answer;
+            response = answer;
         } else {
             LOG.info("Send request, not using kwik");
-            return getDirectResponse(request);
+            response = getDirectResponse(request);
         }
+        validateResponse(response);
+        return response;
     }
 
-    private Response getDirectResponse(HttpRequest request) throws IOException, InterruptedException {
-        HttpResponse httpResponse = this.httpClient.send(request, createBodyHandler());
+    private void validateResponse(Response response) throws MismatchedDevicesException, PushNetworkException, MalformedResponseException {
+        int statusCode = response.getStatusCode();
+        switch (statusCode) {
+            case 409:
+                LOG.info("Got a 409 exception, throw MMDE");
+                MismatchedDevices mismatchedDevices = readResponseJson(response, MismatchedDevices.class);
+                throw new MismatchedDevicesException(mismatchedDevices);
+        }
+    }
+    private Response getDirectResponse(HttpRequest request) throws IOException {
+        HttpResponse httpResponse;
+        try {
+            httpResponse = this.httpClient.send(request, createBodyHandler());
+        } catch (InterruptedException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+            throw new IOException(ex);
+        }
         return new Response(httpResponse);
     }
 
@@ -428,6 +452,23 @@ public class NetworkClient {
         outgoingRequests.put(request.getId(), new OutgoingRequest(future, System.currentTimeMillis()));
         webSocket.sendBinary(ByteBuffer.wrap(message.toByteArray()), true);
         return future;
+    }
+
+    private static <T> T readResponseJson(Response response, Class<T> clazz)
+            throws PushNetworkException, MalformedResponseException {
+        return readBodyJson(response.body(), clazz);
+    }
+
+    private static <T> T readBodyJson(ResponseBody body, Class<T> clazz) throws PushNetworkException, MalformedResponseException {
+        String json = body.string();
+        try {
+            return JsonUtil.fromJson(json, clazz);
+        } catch (JsonProcessingException e) {
+            LOG.log(Level.SEVERE, "error parsing json response", e);
+            throw new MalformedResponseException("Unable to parse entity", e);
+        } catch (IOException e) {
+            throw new PushNetworkException(e);
+        }
     }
 
     class MyWebsocketListener implements WebSocket.Listener {

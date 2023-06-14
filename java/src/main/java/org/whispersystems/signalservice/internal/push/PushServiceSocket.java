@@ -889,7 +889,7 @@ public class PushServiceSocket {
      * @return The avatar URL path, if one was written.
      */
   public Optional<String> writeProfile(SignalServiceProfileWrite signalServiceProfileWrite, ProfileAvatarData profileAvatar)
-      throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException
+      throws NonSuccessfulResponseCodeException, IOException, MalformedResponseException
   {
     String                        requestBody    = JsonUtil.toJson(signalServiceProfileWrite);
     ProfileAvatarUploadAttributes formAttributes;
@@ -1208,7 +1208,7 @@ public class PushServiceSocket {
     }
 
     public AttachmentV2UploadAttributes getAttachmentV2UploadAttributes()
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, IOException, MalformedResponseException {
         String response = makeServiceRequest(ATTACHMENT_V2_PATH, "GET", null);
         try {
             return JsonUtil.fromJson(response, AttachmentV2UploadAttributes.class);
@@ -1219,7 +1219,7 @@ public class PushServiceSocket {
     }
 
     public AttachmentV3UploadAttributes getAttachmentV3UploadAttributes()
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, IOException, MalformedResponseException {
         String response = makeServiceRequest(ATTACHMENT_V3_PATH, "GET", null);
         try {
             return JsonUtil.fromJson(response, AttachmentV3UploadAttributes.class);
@@ -1333,8 +1333,6 @@ public class PushServiceSocket {
             }
         } catch (IOException ioe) {
             throw new PushNetworkException(ioe);
-        } catch (InterruptedException ex) {
-            throw new PushNetworkException(ex);
         }
     }
 
@@ -1373,7 +1371,7 @@ public class PushServiceSocket {
         HttpRequest request = requestBuilder.build();
         try {
             client.sendRequest(request, new byte[0]);
-        } catch (IOException | InterruptedException ex) {
+        } catch (IOException  ex) {
             Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
             throw new PushNetworkException(ex);
         }
@@ -1605,51 +1603,48 @@ public class PushServiceSocket {
 //    }
 
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, IOException, MalformedResponseException {
         return makeServiceRequestWithoutAuthentication(urlFragment, method, jsonBody, NO_HANDLER);
     }
 
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody, ResponseCodeHandler responseCodeHandler)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, IOException, MalformedResponseException {
         return makeServiceRequestWithoutAuthentication(urlFragment, method, jsonBody, NO_HEADERS, responseCodeHandler);
     }
 
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody, Map<String, String> headers)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, MalformedResponseException, IOException {
         return makeServiceRequestWithoutAuthentication(urlFragment, method, jsonBody, headers, NO_HANDLER);
     }
 
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody, Map<String, String> headers, ResponseCodeHandler responseCodeHandler)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException, IOException {
         ResponseBody responseBody = makeServiceRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, responseCodeHandler, Optional.empty(), true, jsonBody).body();
             return responseBody.string();
 
     }
 
     private String makeServiceRequest(String urlFragment, String method, String jsonBody)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws IOException {
         return makeServiceRequest(urlFragment, method, jsonBody, NO_HEADERS, NO_HANDLER, Optional.empty());
     }
 
     public String makeServiceRequest(String urlFragment, String method, String jsonBody, Map<String, String> headers)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException, IOException {
         return makeServiceRequest(urlFragment, method, jsonBody, headers, NO_HANDLER, Optional.empty());
     }
 
-    private String makeServiceRequest(String urlFragment, String method, String jsonBody, Map<String, String> headers, ResponseCodeHandler responseCodeHandler)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+    private String makeServiceRequest(String urlFragment, String method, String jsonBody, Map<String, String> headers, ResponseCodeHandler responseCodeHandler) throws IOException {
         return makeServiceRequest(urlFragment, method, jsonBody, headers, responseCodeHandler, Optional.empty());
     }
 
-    private String makeServiceRequest(String urlFragment, String method, String jsonBody, Map<String, String> headers, Optional<UnidentifiedAccess> unidentifiedAccessKey)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+    private String makeServiceRequest(String urlFragment, String method, String jsonBody, Map<String, String> headers, Optional<UnidentifiedAccess> unidentifiedAccessKey) throws IOException {
         return makeServiceRequest(urlFragment, method, jsonBody, headers, NO_HANDLER, unidentifiedAccessKey);
     }
 
     private String makeServiceRequest(String urlFragment, String method, String jsonBody,
             Map<String, String> headers, ResponseCodeHandler responseCodeHandler,
-            Optional<UnidentifiedAccess> unidentifiedAccessKey)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            Optional<UnidentifiedAccess> unidentifiedAccessKey) throws IOException {
         ResponseBody responseBody = makeServiceBodyRequest(urlFragment, method, jsonRequestBody(jsonBody), headers, responseCodeHandler, unidentifiedAccessKey, jsonBody);
         return new String(responseBody.bytes());
     }
@@ -1704,7 +1699,7 @@ public class PushServiceSocket {
             ResponseCodeHandler responseCodeHandler,
             Optional<UnidentifiedAccess> unidentifiedAccessKey,
             String rawBody)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException, IOException {
         return makeServiceRequest(urlFragment, method, body, headers, responseCodeHandler, unidentifiedAccessKey, rawBody).body();
     }
 
@@ -1714,8 +1709,7 @@ public class PushServiceSocket {
             Map<String, String> headers,
             ResponseCodeHandler responseCodeHandler,
             Optional<UnidentifiedAccess> unidentifiedAccessKey,
-            String rawBody)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
+            String rawBody) throws IOException {
         return makeServiceRequest(urlFragment, method, body, headers, responseCodeHandler, unidentifiedAccessKey, false, rawBody);
     }
 
@@ -1726,9 +1720,7 @@ public class PushServiceSocket {
             ResponseCodeHandler responseCodeHandler,
             Optional<UnidentifiedAccess> unidentifiedAccessKey,
             boolean doNotAddAuthenticationOrUnidentifiedAccessKey,
-            String rawBody)
-            throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException {
-             //    throw new UnsupportedOperationException("NYI");
+            String rawBody) throws IOException {
 //
         Response response = getServiceConnection(urlFragment, method, body, headers, unidentifiedAccessKey, doNotAddAuthenticationOrUnidentifiedAccessKey, rawBody);
         return response;
@@ -1842,18 +1834,13 @@ public class PushServiceSocket {
             Optional<UnidentifiedAccess> unidentifiedAccess,
             boolean doNotAddAuthenticationOrUnidentifiedAccessKey,
             String rawBody)
-            throws PushNetworkException {
+            throws IOException {
 
-        try {
-            HttpRequest serviceRequest = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
-            NetworkClient client = buildNetworkClient(unidentifiedAccess.isPresent());
-            byte[] rawBytes = (body == null? new byte[0] : body.getRawBytes());
-            Response answer = client.sendRequest(serviceRequest, rawBytes);
-            return answer;
-        } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
-            throw new PushNetworkException(ex);
-        }
+        HttpRequest serviceRequest = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
+        NetworkClient client = buildNetworkClient(unidentifiedAccess.isPresent());
+        byte[] rawBytes = (body == null ? new byte[0] : body.getRawBytes());
+        Response answer = client.sendRequest(serviceRequest, rawBytes);
+        return answer;
     }
 
     private NetworkClient buildNetworkClient(boolean unidentified) {
@@ -2088,9 +2075,7 @@ public class PushServiceSocket {
             }
         } catch (IOException e) {
             throw new PushNetworkException(e);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        } 
         throw new NonSuccessfulResponseCodeException(statusCode, "Response: " + response);
     }
 
@@ -2545,7 +2530,7 @@ public class PushServiceSocket {
     }
 
   public CurrencyConversions getCurrencyConversions()
-      throws NonSuccessfulResponseCodeException, PushNetworkException, MalformedResponseException
+      throws NonSuccessfulResponseCodeException, IOException, MalformedResponseException
   {
     String response = makeServiceRequest(PAYMENTS_CONVERSIONS, "GET", null);
     try {
@@ -2557,7 +2542,7 @@ public class PushServiceSocket {
   }
 
     public void reportSpam(ServiceId serviceId, String serverGuid)
-            throws NonSuccessfulResponseCodeException, MalformedResponseException, PushNetworkException {
+            throws NonSuccessfulResponseCodeException, MalformedResponseException, IOException {
         makeServiceRequest(String.format(REPORT_SPAM, serviceId.toString(), serverGuid), "POST", "");
     }
 
