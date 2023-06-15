@@ -1196,7 +1196,7 @@ public class PushServiceSocket {
     }
 
     public void cancelInFlightRequests() {
-              throw new UnsupportedOperationException("NYI");
+        LOG.warning("We don't cancel inflight requests");
 //
 //        synchronized (connections) {
 //            Log.w(TAG, "Canceling: " + connections.size());

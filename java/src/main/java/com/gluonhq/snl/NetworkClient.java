@@ -110,6 +110,27 @@ public class NetworkClient {
         return answer;
     }
 
+    long lastRestart = 0l;
+
+    private void reCreateWebSocket() {
+        Thread t = new Thread() {
+            @Override
+            public void run() {
+                if ((System.currentTimeMillis() - lastRestart) < 10000) {
+                    LOG.info("Restart requested, but previous request has been less than 10s. Ignore.");
+                } else {
+                    lastRestart = System.currentTimeMillis();
+                    try {
+                        createWebSocket();
+                    } catch (IOException ex) {
+                        Logger.getLogger(NetworkClient.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+        };
+        t.start();
+    }
+
     private void createWebSocket() throws IOException {
         WebSocket.Builder wsBuilder = this.httpClient.newWebSocketBuilder();
         wsBuilder.header("X-Signal-Agent", signalAgent);
@@ -175,7 +196,9 @@ public class NetworkClient {
 
     public void shutdown() {
         this.closed = true;
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (this.webSocket != null) {
+            this.webSocket.abort();
+        }
     }
 
     public Future<SendGroupMessageResponse> sendToGroup(byte[] body, byte[] joinedUnidentifiedAccess, long timestamp, boolean online) {
@@ -476,11 +499,13 @@ public class NetworkClient {
         @Override
         public void onError(WebSocket webSocket, Throwable error) {
             LOG.log(Level.SEVERE, "ERROR IN WEBSOCKET!", error);
-            error.printStackTrace();
+            reCreateWebSocket();
+        //    error.printStackTrace();
         }
 
         @Override
         public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+            LOG.info("Websocket opened");
             Thread.dumpStack();
             throw new UnsupportedOperationException("Not supported yet.");
         }
