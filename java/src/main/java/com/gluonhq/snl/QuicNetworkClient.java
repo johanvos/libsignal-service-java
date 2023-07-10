@@ -52,6 +52,7 @@ public class QuicNetworkClient extends NetworkClient {
         this.kwikSender = (uri == null? null : new KwikSender(uri));
     }
 
+    @Override
     protected CompletableFuture<Response> asyncSendRequest(HttpRequest request, byte[] raw) throws IOException {
 
         CompletableFuture<Response> response;
@@ -104,8 +105,20 @@ public class QuicNetworkClient extends NetworkClient {
         return answer;
     }
 
+    @Override
+    protected CompletableFuture<Response> implAsyncSendRequest(HttpRequest request, byte[] raw) throws IOException {
+        LOG.info("Send request, using kwik");
+        URI uri = request.uri();
+        String method = request.method();
+        Map headers = request.headers().map();
+        CompletableFuture<Response> response = getKwikResponse(uri, method, raw, headers);
+        LOG.info("Got request, using kwik");
+        return response;
+    }
+
+    @Override
     void sendToStream(byte[] payload) throws IOException {
-         this.kwikSender.writeMessageToStream(kwikStream, payload);
+        this.kwikSender.writeMessageToStream(kwikStream, payload);
     }
 
 }
