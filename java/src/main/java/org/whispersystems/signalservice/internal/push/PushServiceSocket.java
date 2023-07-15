@@ -501,7 +501,16 @@ public class PushServiceSocket {
     }
 
     public byte[] getSenderCertificate() throws IOException {
-        String responseText = makeServiceRequest(SENDER_CERTIFICATE_PATH, "GET", null);
+        LOG.info("Using NC approach");
+        NetworkClient client = buildNetworkClient(false);
+        Response response = client.sendRequest(SENDER_CERTIFICATE_PATH, "GET", null, null);
+        String responseText = response.body().string();
+//        LOG.info("NEWGSC1 bytes = "+Arrays.toString(response.body().bytes()));
+//        LOG.info("NEWGSC1 text = "+response.body().string());
+//
+//       // return response.body().bytes();
+//        String responseText = makeServiceRequest(SENDER_CERTIFICATE_PATH, "GET", null);
+//        System.err.println("OLDGSC, resptext = "+responseText);
         return JsonUtil.fromJson(responseText, SenderCertificate.class).getCertificate();
     }
 
@@ -1080,7 +1089,7 @@ public class PushServiceSocket {
 //        }
 //    }
 
-    private String getCredentials(String authPath) throws IOException {
+    private String getCredentials(String authPath) throws IOException { 
         String response = makeServiceRequest(authPath, "GET", null, NO_HEADERS);
         AuthCredentials token = JsonUtil.fromJson(response, AuthCredentials.class);
         return token.asBasic();
@@ -1844,7 +1853,6 @@ public class PushServiceSocket {
     }
 
     private NetworkClient buildNetworkClient(boolean unidentified) {
-//
         ServiceConnectionHolder connectionHolder = (ServiceConnectionHolder) getRandom(serviceClients, random);
         NetworkClient baseClient = unidentified ? connectionHolder.getUnidentifiedClient() : connectionHolder.getClient();
         return baseClient;
@@ -1874,7 +1882,7 @@ public class PushServiceSocket {
         for (Map.Entry<String, String> header : headers.entrySet()) {
             request.header(header.getKey(), header.getValue());
         }
-
+        System.err.println("CURRENT headers = ");
         if (!headers.containsKey("Authorization") && !doNotAddAuthenticationOrUnidentifiedAccessKey) {
             if (unidentifiedAccess.isPresent()) {
                 request.header("Unidentified-Access-Key", Base64.encodeBytes(unidentifiedAccess.get().getUnidentifiedAccessKey()));
@@ -1882,6 +1890,7 @@ public class PushServiceSocket {
                 request.header("Authorization", getAuthorizationHeader(credentialsProvider));
             }
         }
+        System.err.println("NEW headers = "+headers);
 
         if (signalAgent != null) {
             request.header("X-Signal-Agent", signalAgent);
@@ -2138,7 +2147,7 @@ public class PushServiceSocket {
         return serviceConnectionHolders.toArray(new ServiceConnectionHolder[0]);
     }
 
-    private static Map<Integer, ConnectionHolder[]> createCdnClientsMap(final Map<Integer, SignalCdnUrl[]> signalCdnUrlMap,
+    private Map<Integer, ConnectionHolder[]> createCdnClientsMap(final Map<Integer, SignalCdnUrl[]> signalCdnUrlMap,
 
             final Optional<SignalProxy> proxy) {
         validateConfiguration(signalCdnUrlMap);
@@ -2156,7 +2165,7 @@ public class PushServiceSocket {
         }
     }
 
-    private static ConnectionHolder[] createConnectionHolders(SignalUrl[] urls, Optional<SignalProxy> proxy) {
+    private ConnectionHolder[] createConnectionHolders(SignalUrl[] urls, Optional<SignalProxy> proxy) {
         List<ConnectionHolder> connectionHolders = new LinkedList<>();
 
         for (SignalUrl url : urls) {
@@ -2166,8 +2175,8 @@ public class PushServiceSocket {
         return connectionHolders.toArray(new ConnectionHolder[0]);
     }
 
-    private static NetworkClient createConnectionClient(SignalUrl url, Optional<SignalProxy> proxy) {
-      return NetworkClient.createNetworkClient(url, "FOO", true);
+    private NetworkClient createConnectionClient(SignalUrl url, Optional<SignalProxy> proxy) {
+      return NetworkClient.createNetworkClient(url, Optional.of(this.credentialsProvider), "FOO", Optional.empty(),true);
     }
 
     private String getAuthorizationHeader(CredentialsProvider credentialsProvider) {

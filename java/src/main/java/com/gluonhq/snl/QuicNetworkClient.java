@@ -53,20 +53,6 @@ public class QuicNetworkClient extends NetworkClient {
     }
 
     @Override
-    protected CompletableFuture<Response> asyncSendRequest(HttpRequest request, byte[] raw) throws IOException {
-
-        CompletableFuture<Response> response;
-        LOG.info("Send request, using kwik");
-        URI uri = request.uri();
-        String method = request.method();
-        Map headers = request.headers().map();
-        CompletableFuture<Response> answer = getKwikResponse(uri, method, raw, headers);
-        LOG.info("Got request, using kwik");
-        response = answer;
-        return response;
-    }
-
-    @Override
     void implCreateWebSocket(String baseUrl)  throws IOException {
         Map<String, String> headerMap = new HashMap<>();
         headerMap.put("X-Signal-Agent", signalAgent);
@@ -88,8 +74,9 @@ public class QuicNetworkClient extends NetworkClient {
         this.kwikStream = kwikSender.openWebSocket(baseUrl, headerMap, gotData);
     }
 
-    @Override
-    CompletableFuture<Response> getKwikResponse(URI uri, String method, byte[] body, Map<String, List<String>> headers) throws IOException {
+    CompletableFuture<Response> getKwikResponse(URI uri, String method, byte[] body, Map<String, List<String>> headers) {
+        if (body == null) body = new byte[0];
+        if (headers == null) headers = new HashMap<>();
         SignalRpcMessage.Builder requestBuilder = SignalRpcMessage.newBuilder();
         requestBuilder.setUrlfragment(uri.toString());
         requestBuilder.setBody(ByteString.copyFrom(body));
@@ -114,6 +101,17 @@ public class QuicNetworkClient extends NetworkClient {
         CompletableFuture<Response> response = getKwikResponse(uri, method, raw, headers);
         LOG.info("Got request, using kwik");
         return response;
+    }
+
+    @Override 
+    CompletableFuture<Response> implAsyncSendRequest(String url, String method, byte[] body, Map<String, List<String>> headers) {
+        URI uri;
+        try {
+            uri = new URI(url);
+            return getKwikResponse(uri, method, body, headers);
+        } catch (URISyntaxException ex) {
+            throw new IllegalArgumentException (ex);
+        }
     }
 
     @Override

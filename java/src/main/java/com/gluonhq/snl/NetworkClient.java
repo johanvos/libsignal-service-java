@@ -3,6 +3,7 @@ package com.gluonhq.snl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.ByteString;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -26,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MalformedResponseException;
 import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
 import org.whispersystems.signalservice.api.push.exceptions.ServerRejectedException;
@@ -96,6 +98,7 @@ public abstract class NetworkClient {
         this.signalAgent = signalAgent;
         this.allowStories = allowStories;
         this.credentialsProvider = cp;
+        if (cp.isPresent()) Thread.dumpStack();
         this.connectivityListener = connectivityListener;
         LOG.info("Created NetworkClient with URL " + url + ", cp = " + cp + " and cl = "
                 + connectivityListener);
@@ -330,10 +333,6 @@ public abstract class NetworkClient {
         }
     }
 
-    CompletableFuture<Response> getKwikResponse(URI uri, String method, byte[] body, Map<String, List<String>> headers) throws IOException {
-        throw new UnsupportedOperationException();
-    }
-
     private static Optional<String> findHeader(WebSocketRequestMessage message, String targetHeader) {
         if (message.getHeadersCount() == 0) {
             return Optional.empty();
@@ -419,6 +418,23 @@ public abstract class NetworkClient {
         }
     }
 
+    public Response sendRequest(String uri, String method, byte[] body, Map<String, List<String>> headers) {
+        try {
+            if (headers == null) headers = new HashMap<>();
+            String realUrl = signalUrl.getUrl()+uri;
+            if (!headers.containsKey("Authorization")) {
+                if (credentialsProvider.isPresent()) {
+                    headers.put("Authorization", List.of(getAuthorizationHeader(credentialsProvider.get())));
+                }
+            }
+            System.err.println("NOW headers = "+headers+", cp = "+credentialsProvider);
+            return implAsyncSendRequest(realUrl, method, body, headers).get();
+        } catch (InterruptedException | ExecutionException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+            throw new RuntimeException(ex);
+        }
+    }
+
     /**
      * Sends a request and immediately return a Future.
      *
@@ -431,6 +447,8 @@ public abstract class NetworkClient {
         if (closed) {
             throw new IOException("Trying to use a closed networkclient " + this);
         }
+        System.err.println("REQUEST HEADERS "+request.headers().map());
+        System.err.println("REQ URL = "+request.uri());
         CompletableFuture<Response> response = implAsyncSendRequest(request, raw);
         response.thenApply(res -> validateResponse(res));
         return response;
@@ -483,6 +501,10 @@ public abstract class NetworkClient {
         }
     }
 
+    CompletableFuture<Response> implAsyncSendRequest(String uri, String method, byte[] body, Map<String, List<String>> headers) {
+        throw new UnsupportedOperationException("Not supported yet."); 
+    }
+
     private static class OutgoingRequest {
 
         private final SettableFuture<WebsocketResponse> responseFuture;
@@ -499,6 +521,18 @@ public abstract class NetworkClient {
 
         long getStartTimestamp() {
             return startTimestamp;
+        }
+    }
+    
+    private String getAuthorizationHeader(CredentialsProvider credentialsProvider) {
+        try {
+            String identifier = credentialsProvider.getAci() != null ? credentialsProvider.getAci().toString() : credentialsProvider.getE164();
+            if (credentialsProvider.getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID) {
+                identifier += "." + credentialsProvider.getDeviceId();
+            }
+            return "Basic " + Base64.encodeBytes((identifier + ":" + credentialsProvider.getPassword()).getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new AssertionError(e);
         }
     }
 
