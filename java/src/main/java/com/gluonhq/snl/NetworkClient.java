@@ -2,17 +2,11 @@ package com.gluonhq.snl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.ByteString;
-import io.privacyresearch.grpcproxy.client.KwikSender;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodySubscribers;
-import java.net.http.WebSocket;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -25,14 +19,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
@@ -92,7 +82,7 @@ public abstract class NetworkClient {
         String property = System.getProperty("wave.quic", "false");
         boolean useQuic = "true".equals(property.toLowerCase());
         if (useQuic) {
-            return new QuicNetworkClient(url, agent, allowStories);
+            return new QuicNetworkClient(url, cp, agent, cl, allowStories);
         } else {
             return new LegacyNetworkClient(url, Optional.empty(), agent, Optional.empty(), allowStories);
         }
@@ -107,7 +97,7 @@ public abstract class NetworkClient {
         this.allowStories = allowStories;
         this.credentialsProvider = cp;
         this.connectivityListener = connectivityListener;
-        LOG.info("Created NetworkClient with url " + url + ", cp = " + cp + " and cl = "
+        LOG.info("Created NetworkClient with URL " + url + ", cp = " + cp + " and cl = "
                 + connectivityListener);
         this.formatProcessingThread = new Thread() {
             @Override
