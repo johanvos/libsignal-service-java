@@ -228,7 +228,7 @@ public abstract class NetworkClient {
                 add("content-type:application/json");
             }
         };
-
+        unidentifiedAccess.ifPresent(ua -> headers.add("Unidentified-Access-Key:" + Base64.encodeBytes(unidentifiedAccess.get().getUnidentifiedAccessKey())));
         WebSocketRequestMessage requestMessage = WebSocketRequestMessage.newBuilder()
                 .setId(new SecureRandom().nextLong())
                 .setVerb("PUT")
@@ -302,7 +302,7 @@ public abstract class NetworkClient {
             while (true) { // we only return existing envelopes
                 LOG.info("Wait for requestMessage...");
                 WebSocketRequestMessage request = wsRequestMessageQueue.take();//poll(timeout, unit);
-                LOG.info("Got requestMessage, process now " + request);
+                LOG.info("Got requestMessage, process now " + request.getVerb()+" " + request.getPath());
                 Optional<SignalServiceEnvelope> sse = handleWebSocketRequestMessage(request);
                 if (sse.isPresent()) {
                     return sse.get();

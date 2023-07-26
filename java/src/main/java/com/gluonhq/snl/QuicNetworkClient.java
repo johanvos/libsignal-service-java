@@ -81,7 +81,7 @@ public class QuicNetworkClient extends NetworkClient {
             try {
                 LOG.info("WS Got reply");
                 SignalRpcReply signalReply = SignalRpcReply.parseFrom(reply);
-                LOG.info("Reply = "+signalReply);
+                LOG.info("Reply has statuscode "+signalReply.getStatuscode());
                 rawByteQueue.put(signalReply.getMessage().toByteArray());
             } catch (InterruptedException ex) {
                 Logger.getLogger(NetworkClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -98,14 +98,9 @@ public class QuicNetworkClient extends NetworkClient {
     CompletableFuture<Response> getKwikResponse(URI uri, String method, byte[] body, Map<String, List<String>> headers) throws IOException {
         SignalRpcMessage.Builder requestBuilder = SignalRpcMessage.newBuilder();
         requestBuilder.setUrlfragment(uri.toString());
-        if (body.length > 10) {
-            System.err.println("KWIK, send body = "+Arrays.toString(body));
-            Thread.dumpStack();
-        }
         requestBuilder.setBody(ByteString.copyFrom(body));
         headers.entrySet().forEach(header -> {
             header.getValue().forEach(hdr -> {
-                System.err.println("ADD hdr "+header.getKey()+" with val "+hdr);
                 requestBuilder.addHeader(header.getKey() + "=" + hdr);
             });
         });
