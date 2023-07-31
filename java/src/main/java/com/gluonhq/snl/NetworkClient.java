@@ -236,9 +236,9 @@ public abstract class NetworkClient {
                 .addAllHeaders(headers)
                 .setBody(ByteString.copyFrom(JsonUtil.toJson(list).getBytes()))
                 .build();
-        LOG.info("SENDDIRECT, "+list.getDestination());
-        LOG.info("JSONLISTSIZE = "+ JsonUtil.toJson(list).getBytes().length);
-        LOG.info("jsonlist = "+JsonUtil.toJson(list));
+        LOG.info("Send direct msg to "+list.getDestination());
+        LOG.finest("JSONLISTSIZE = "+ JsonUtil.toJson(list).getBytes().length);
+        LOG.finest("jsonlist = "+JsonUtil.toJson(list));
         ListenableFuture<WebsocketResponse> response = sendRequest(requestMessage, list);
         ResponseMapper<SendMessageResponse> responseMapper = DefaultResponseMapper.extend(SendMessageResponse.class)
                 .withResponseMapper((status, body, getHeader, unidentified) -> {
