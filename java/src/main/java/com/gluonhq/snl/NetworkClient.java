@@ -517,11 +517,9 @@ public abstract class NetworkClient {
                 .setRequest(request).build();
         SettableFuture<WebsocketResponse> future = new SettableFuture<>();
         outgoingRequests.put(request.getId(), new OutgoingRequest(future, System.currentTimeMillis()));
-        LOG.info("SENDING WSRM, path = "+request.getPath()+" with id = "+request.getId());
-        LOG.info("Bytes in wsm = "+message.toByteArray().length+" and request size = "+ request.toByteArray().length+" and body size = "+request.getBody().toByteArray().length);
+        LOG.finest("SENDING WSRM, path = "+request.getPath()+" with id = "+request.getId());
+        LOG.finest("Bytes in wsm = "+message.toByteArray().length+" and request size = "+ request.toByteArray().length+" and body size = "+request.getBody().toByteArray().length);
         this.sendToStream(message, list);
-        LOG.info("DONE SENDING WSRM, path = "+request.getPath()+" with id = "+request.getId());
-
         return future;
     }
 

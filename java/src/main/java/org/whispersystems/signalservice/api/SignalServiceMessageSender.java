@@ -157,7 +157,7 @@ public class SignalServiceMessageSender {
 
     private static final String TAG = SignalServiceMessageSender.class.getSimpleName();
 
-    private static final int RETRY_COUNT = 1;
+    private static final int RETRY_COUNT = 4;
 
     private final PushServiceSocket socket;
     private final SignalServiceAccountDataStore aciStore;

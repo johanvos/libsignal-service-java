@@ -186,7 +186,6 @@ public class SignalServiceMessageReceiver {
    * @return A SignalServiceMessagePipe for receiving Signal Service messages.
    */
     public NetworkClient createMessagePipe(Consumer callback) {
-        System.err.println("CREATE MESSAGEPIPE!! cred = " + credentialsProvider);
         NetworkClient networkClient = NetworkClient.createNetworkClient(urls.getSignalServiceUrls()[0], Optional.of(credentialsProvider), signalAgent, Optional.of(connectivityListener), allowStories);
         callback.accept(networkClient);
 //                                                            Optional.of(credentialsProvider), signalAgent,  )

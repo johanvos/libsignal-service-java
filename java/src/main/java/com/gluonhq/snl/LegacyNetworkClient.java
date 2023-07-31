@@ -115,7 +115,7 @@ public class LegacyNetworkClient extends NetworkClient {
         try {
             LOG.info("Invoke send on httpClient " + this.httpClient);
             httpResponse = this.httpClient.send(request, createBodyHandler());
-            LOG.info("Did Invoke send on httpClient");
+            LOG.info("Did invoke send on httpClient");
         } catch (InterruptedException ex) {
             LOG.log(Level.SEVERE, "Error sending using httpClient " + this.httpClient, ex);
             throw new IOException(ex);
@@ -140,7 +140,7 @@ public class LegacyNetworkClient extends NetworkClient {
                         .setPath("/v1/keepalive")
                         .setVerb("GET")
                         .build()).build();
-        System.err.println("KEEPALIVE: " + message);
+        LOG.info("KEEPALIVE: " + message);
         CompletableFuture fut = CompletableFuture.runAsync(() -> {
             try {
                 sendToStream(message, null);

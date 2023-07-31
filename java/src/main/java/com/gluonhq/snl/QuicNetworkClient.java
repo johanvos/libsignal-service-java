@@ -133,14 +133,21 @@ public class QuicNetworkClient extends NetworkClient {
 
     @Override
     void sendToStream(WebSocketMessage msg, OutgoingPushMessageList list) throws IOException {
-        msg = experimentMessage(msg, list);
+        msg = convertMessage(msg, list);
         SignalRpcMessage.Builder builder = SignalRpcMessage.newBuilder();
         builder.setBody(ByteString.copyFrom(msg.toByteArray()));
         SignalRpcMessage signalMessage = builder.build();
         this.kwikSender.writeMessageToStream(kwikStream, signalMessage);
     }
 
-    WebSocketMessage experimentMessage(WebSocketMessage msg, OutgoingPushMessageList list) {
+    /**
+     * Remove json messages from the WebSocketMessage, and replace with serialized
+     * OutgoingPushMessageList
+     * @param msg
+     * @param list
+     * @return 
+     */
+    WebSocketMessage convertMessage(WebSocketMessage msg, OutgoingPushMessageList list) {
         if ((list == null) || (msg.getRequest() == null)) return msg;
         WebSocketRequestMessage wrm = msg.getRequest();
         WebSocketProtos.WebSocketRequestMessage.Builder newBuilder = wrm.toBuilder();
@@ -162,7 +169,7 @@ public class QuicNetworkClient extends NetworkClient {
         WebSocketProtos.WebSocketRequestMessage newRequestMessage = newBuilder.build();
         int newSize = newRequestMessage.toByteArray().length;
         int oldSize = wrm.toByteArray().length;
-        System.err.println("OLD SIZE = "+oldSize+" and newSize = "+newSize);
+        LOG.info("converted websocketmessage from OLD SIZE = "+oldSize+" to newSize = "+newSize);
         return msg.toBuilder().setRequest(newRequestMessage).build();
     }
 }
