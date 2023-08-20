@@ -1,0 +1,15 @@
+syntax = "proto3";
+option java_multiple_files = true; 
+option java_package = "io.privacyresearch.servermodel";
+
+message UserRemoteConfigListMessage {
+  int64 serverEpoch = 1;
+  repeated UserRemoteConfigMessage userRemoteConfig = 2;
+}
+
+message UserRemoteConfigMessage {
+  string name = 1;
+  optional bool enabled = 2;
+  optional string value = 3;
+}
+
