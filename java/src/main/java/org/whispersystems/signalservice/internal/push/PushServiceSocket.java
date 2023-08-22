@@ -538,6 +538,7 @@ public class PushServiceSocket {
             int deviceIdInteger)
             throws IOException {
         try {
+            Thread.dumpStack();
             String deviceId = String.valueOf(deviceIdInteger);
 
             if (deviceId.equals("1")) {
@@ -583,6 +584,7 @@ public class PushServiceSocket {
 
     public PreKeyBundle getPreKey(SignalServiceAddress destination, int deviceId) throws IOException {
         try {
+            Thread.dumpStack();
             String path = String.format(PREKEY_DEVICE_PATH, destination.getIdentifier(), String.valueOf(deviceId));
 
             String responseText = makeServiceRequest(path, "GET", null);

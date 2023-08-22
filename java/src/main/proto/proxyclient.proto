@@ -13,3 +13,25 @@ message UserRemoteConfigMessage {
   optional string value = 3;
 }
 
+message PreKeyResponseMessage {
+  bytes identityKey = 1;
+  repeated PreKeyResponseItemMessage devices = 2;
+}
+
+message PreKeyResponseItemMessage {
+  int32 deviceId = 1;
+  int32 registrationId = 2;
+  SignedPreKeyEntityMessage signedPreKeyEntity = 3;
+  PreKeyEntityMessage preKeyEntity = 4;
+}
+
+message SignedPreKeyEntityMessage {
+  int64 keyId          = 1;
+  bytes publicKeyBytes = 2;
+  bytes signature      = 3;    
+}
+
+message PreKeyEntityMessage {
+  int64 keyId          = 1;
+  bytes publicKeyBytes = 2;
+}

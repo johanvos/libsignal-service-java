@@ -25,6 +25,11 @@ public class PreKeyResponse {
   @JsonProperty
   private List<PreKeyResponseItem> devices;
 
+  public PreKeyResponse(IdentityKey key, List<PreKeyResponseItem> items) {
+      this.identityKey = key;
+      this.devices = items;
+  }
+
   public IdentityKey getIdentityKey() {
     return identityKey;
   }
