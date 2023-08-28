@@ -85,7 +85,6 @@ public class QuicNetworkClient extends NetworkClient {
 
     @Override
     protected CompletableFuture<Response> implAsyncSendRequest(URI uri, String method, byte[] body, Map<String, List<String>> headers) throws IOException {
-      Thread.dumpStack();
         SignalRpcMessage.Builder requestBuilder = SignalRpcMessage.newBuilder();
         requestBuilder.setUrlfragment(uri.toString());
         requestBuilder.setBody(ByteString.copyFrom(body));
@@ -102,13 +101,11 @@ public class QuicNetworkClient extends NetworkClient {
     }
     
     private CompletableFuture<SignalRpcReply> sendSignalMessage(SignalRpcMessage msg) {
-        Thread.dumpStack();
         return quicSignalLayer.sendSignalMessage(msg);
     }
 
     @Override
     protected CompletableFuture<Response> implAsyncSendRequest(HttpRequest request, byte[] raw) throws IOException {
-      Thread.dumpStack();
         LOG.info("Send request, using Kwik");
         URI uri = request.uri();
         String method = request.method();

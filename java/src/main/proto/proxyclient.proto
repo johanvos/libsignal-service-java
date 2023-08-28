@@ -35,3 +35,12 @@ message PreKeyEntityMessage {
   int64 keyId          = 1;
   bytes publicKeyBytes = 2;
 }
+
+message CredentialsResponseMessage {
+  repeated CredentialsMessage credentials = 1;
+}
+
+message CredentialsMessage {
+  bytes credentials = 1;
+  int64 redemptionTime = 2;
+}

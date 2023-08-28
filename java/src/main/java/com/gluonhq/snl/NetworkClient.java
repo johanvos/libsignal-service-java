@@ -107,7 +107,7 @@ public abstract class NetworkClient {
     public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String agent, Optional<ConnectivityListener> cl, boolean allowStories) {
         String property = System.getProperty("wave.quic", "true");
         boolean useQuic = "true".equals(property.toLowerCase());
-        LOG.info("Creating networkclient, using quic? "+ useQuic);
+        LOG.info("Creating Networkclient, using quic? "+ useQuic);
         if (useQuic) {
             return new QuicNetworkClient(url, cp, agent, cl, allowStories);
         } else {
@@ -116,7 +116,7 @@ public abstract class NetworkClient {
     }
 
     public NetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String signalAgent, Optional<ConnectivityListener> connectivityListener, boolean allowStories) {
-        String property = System.getProperty("wave.quic", "false");
+        String property = System.getProperty("wave.quic", "true");
 
         this.useQuic = "true".equals(property.toLowerCase());
         this.signalUrl = url;

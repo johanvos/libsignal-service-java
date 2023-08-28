@@ -457,13 +457,11 @@ public class PushServiceSocket {
     public void disableRegistrationLockV2() throws IOException {
         makeServiceRequest(REGISTRATION_LOCK_PATH, "DELETE", null);
     }
-//
-//    public byte[] getSenderCertificate() throws IOException {
-//        String responseText = makeServiceRequest(SENDER_CERTIFICATE_PATH, "GET", null);
-//        System.err.println("RESPONSETEXT = "+responseText);
-//        System.err.println("RTL = "+responseText.length());
-//        return JsonUtil.fromJson(responseText, SenderCertificate.class).getCertificate();
-//    }
+
+    public byte[] getSenderCertificate() throws IOException {
+        String responseText = makeServiceRequest(SENDER_CERTIFICATE_PATH, "GET", null);
+        return JsonUtil.fromJson(responseText, SenderCertificate.class).getCertificate();
+    }
 
     public byte[] getUuidOnlySenderCertificate() throws IOException {
         String responseText = makeServiceRequest(SENDER_CERTIFICATE_NO_E164_PATH, "GET", null);
@@ -538,7 +536,6 @@ public class PushServiceSocket {
             int deviceIdInteger)
             throws IOException {
         try {
-            Thread.dumpStack();
             String deviceId = String.valueOf(deviceIdInteger);
 
             if (deviceId.equals("1")) {
@@ -584,7 +581,6 @@ public class PushServiceSocket {
 
     public PreKeyBundle getPreKey(SignalServiceAddress destination, int deviceId) throws IOException {
         try {
-            Thread.dumpStack();
             String path = String.format(PREKEY_DEVICE_PATH, destination.getIdentifier(), String.valueOf(deviceId));
 
             String responseText = makeServiceRequest(path, "GET", null);
@@ -2089,6 +2085,7 @@ public class PushServiceSocket {
                 null,
                 NO_HEADERS,
                 Optional.empty());
+              System.err.println("RETRIEVEGROUPCRED => "+response);
         return JsonUtil.fromJson(response, CredentialResponse.class);
     }
 //       public CredentialResponse retrieveGroupsV2Credentials(int today)

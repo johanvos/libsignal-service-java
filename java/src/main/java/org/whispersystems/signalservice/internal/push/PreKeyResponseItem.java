@@ -23,7 +23,9 @@ public class PreKeyResponseItem {
 
   @JsonProperty
   private PreKeyEntity       preKey;
-
+  
+  public PreKeyResponseItem() {}
+  
   public PreKeyResponseItem(int dev, int reg, PreKeyEntity pke, SignedPreKeyEntity spke) {
       this.deviceId = dev;
       this.registrationId = reg;
