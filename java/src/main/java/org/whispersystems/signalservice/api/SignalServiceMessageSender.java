@@ -130,7 +130,8 @@ import org.whispersystems.signalservice.api.messages.SignalServiceTextAttachment
 import org.whispersystems.signalservice.api.messages.multidevice.RequestMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ViewedMessage;
 import org.whispersystems.signalservice.api.push.DistributionId;
-import org.whispersystems.signalservice.api.push.PNI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.GroupMismatchedDevices;
@@ -268,52 +269,52 @@ public class SignalServiceMessageSender {
                 content, ContentHint.IMPLICIT, message.getGroupId(), true, SenderKeyGroupEvents.EMPTY, false, false);
     }
 
-  /**
-   * Only sends sync message for a story. Useful if you're sending to a group with no one else in it -- meaning you don't need to send a story, but you do need
-   * to send it to your linked devices.
-   */
-  public void sendStorySyncMessage(SignalServiceStoryMessage message,
-                                   long timestamp,
-                                   boolean isRecipientUpdate,
-                                   Set<SignalServiceStoryMessageRecipient> manifest)
-      throws IOException, UntrustedIdentityException
-  {
-    Log.d(TAG, "[" + timestamp + "] Sending a story sync message.");
+    /**
+     * Only sends sync message for a story. Useful if you're sending to a group
+     * with no one else in it -- meaning you don't need to send a story, but you
+     * do need to send it to your linked devices.
+     */
+    public void sendStorySyncMessage(SignalServiceStoryMessage message,
+            long timestamp,
+            boolean isRecipientUpdate,
+            Set<SignalServiceStoryMessageRecipient> manifest)
+            throws IOException, UntrustedIdentityException {
+        Log.d(TAG, "[" + timestamp + "] Sending a story sync message.");
 
-    if (manifest.isEmpty() && !message.getGroupContext().isPresent()) {
-      Log.w(TAG, "Refusing to send sync message for empty manifest in non-group story.");
-      return;
+        if (manifest.isEmpty() && !message.getGroupContext().isPresent()) {
+            Log.w(TAG, "Refusing to send sync message for empty manifest in non-group story.");
+            return;
+        }
+
+        SignalServiceSyncMessage syncMessage = createSelfSendSyncMessageForStory(message, timestamp, isRecipientUpdate, manifest);
+        sendSyncMessage(syncMessage, Optional.empty());
     }
 
-    SignalServiceSyncMessage syncMessage = createSelfSendSyncMessageForStory(message, timestamp, isRecipientUpdate, manifest);
-    sendSyncMessage(syncMessage, Optional.empty());
-  }
+    /**
+     * Send a story using sender key. Note: This is not just for group stories
+     * -- it's for any story. Just following the naming convention of making
+     * sender key method named "sendGroup*"
+     */
+    public List<SendMessageResult> sendGroupStory(DistributionId distributionId,
+            Optional<byte[]> groupId,
+            List<SignalServiceAddress> recipients,
+            List<UnidentifiedAccess> unidentifiedAccess,
+            boolean isRecipientUpdate,
+            SignalServiceStoryMessage message,
+            long timestamp,
+            Set<SignalServiceStoryMessageRecipient> manifest)
+            throws IOException, UntrustedIdentityException, InvalidKeyException, NoSessionException, InvalidRegistrationIdException {
+        Log.d(TAG, "[" + timestamp + "] Sending a story.");
 
-  /**
-   * Send a story using sender key. Note: This is not just for group stories -- it's for any story. Just following the naming convention of making sender key
-   * method named "sendGroup*"
-   */
-  public List<SendMessageResult> sendGroupStory(DistributionId                          distributionId,
-                                                Optional<byte[]>                        groupId,
-                                                List<SignalServiceAddress>              recipients,
-                                                List<UnidentifiedAccess>                unidentifiedAccess,
-                                                boolean                                 isRecipientUpdate,
-                                                SignalServiceStoryMessage               message,
-                                                long                                    timestamp,
-                                                Set<SignalServiceStoryMessageRecipient> manifest)
-      throws IOException, UntrustedIdentityException, InvalidKeyException, NoSessionException, InvalidRegistrationIdException
-  {
-    Log.d(TAG, "[" + timestamp + "] Sending a story.");
+        Content content = createStoryContent(message);
+        List<SendMessageResult> sendMessageResults = sendGroupMessage(distributionId, recipients, unidentifiedAccess, timestamp, content, ContentHint.IMPLICIT, groupId, false, SenderKeyGroupEvents.EMPTY, false, true);
 
-    Content                  content            = createStoryContent(message);
-    List<SendMessageResult>  sendMessageResults = sendGroupMessage(distributionId, recipients, unidentifiedAccess, timestamp, content, ContentHint.IMPLICIT, groupId, false, SenderKeyGroupEvents.EMPTY, false, true);
+        if (aciStore.isMultiDevice()) {
+            sendStorySyncMessage(message, timestamp, isRecipientUpdate, manifest);
+        }
 
-    if (aciStore.isMultiDevice()) {
-      sendStorySyncMessage(message, timestamp, isRecipientUpdate, manifest);
+        return sendMessageResults;
     }
-
-    return sendMessageResults;
-  }
 
     /**
      * Send a call setup message to a single recipient.
@@ -480,47 +481,46 @@ public class SignalServiceMessageSender {
 //
 //        return result;
     }
-  /**
-   * Sends content to a single recipient.
-   */
-  private SendMessageResult sendContent(SignalServiceAddress recipient,
-                                        Optional<UnidentifiedAccessPair> unidentifiedAccess,
-                                        ContentHint contentHint,
-                                        SignalServiceDataMessage message,
-                                        IndividualSendEvents sendEvents,
-                                        boolean urgent, 
-                                        boolean includePniSignature,
-                                        Content content)
-      throws UntrustedIdentityException, IOException
-  {
-    if (includePniSignature) {
-      Log.d(TAG, "[" + message.getTimestamp() + "] Including PNI signature.");
-      content = content.toBuilder()
-                       .setPniSignatureMessage(createPniSignatureMessage())
-                       .build();
+
+    /**
+     * Sends content to a single recipient.
+     */
+    private SendMessageResult sendContent(SignalServiceAddress recipient,
+            Optional<UnidentifiedAccessPair> unidentifiedAccess,
+            ContentHint contentHint,
+            SignalServiceDataMessage message,
+            IndividualSendEvents sendEvents,
+            boolean urgent,
+            boolean includePniSignature,
+            Content content)
+            throws UntrustedIdentityException, IOException {
+        if (includePniSignature) {
+            Log.d(TAG, "[" + message.getTimestamp() + "] Including PNI signature.");
+            content = content.toBuilder()
+                    .setPniSignatureMessage(createPniSignatureMessage())
+                    .build();
+        }
+
+        EnvelopeContent envelopeContent = EnvelopeContent.encrypted(content, contentHint, message.getGroupId());
+
+        sendEvents.onMessageEncrypted();
+
+        long timestamp = message.getTimestamp();
+        SendMessageResult result = sendMessage(recipient, getTargetUnidentifiedAccess(unidentifiedAccess), timestamp, envelopeContent, false, null, urgent, false);
+
+        sendEvents.onMessageSent();
+
+        if (result.getSuccess() != null && result.getSuccess().isNeedsSync()) {
+            Content syncMessage = createMultiDeviceSentTranscriptContent(content, Optional.of(recipient), timestamp, Collections.singletonList(result), false, Collections.emptySet());
+            EnvelopeContent syncMessageContent = EnvelopeContent.encrypted(syncMessage, ContentHint.IMPLICIT, Optional.empty());
+
+            sendMessage(localAddress, Optional.empty(), timestamp, syncMessageContent, false, null, false, false);
+        }
+
+        sendEvents.onSyncMessageSent();
+
+        return result;
     }
-
-    EnvelopeContent envelopeContent = EnvelopeContent.encrypted(content, contentHint, message.getGroupId());
-
-    sendEvents.onMessageEncrypted();
-
-    long              timestamp = message.getTimestamp();
-    SendMessageResult result    = sendMessage(recipient, getTargetUnidentifiedAccess(unidentifiedAccess), timestamp, envelopeContent, false, null, urgent, false); 
-
-    sendEvents.onMessageSent();
-
-    if (result.getSuccess() != null && result.getSuccess().isNeedsSync()) {
-      Content         syncMessage        = createMultiDeviceSentTranscriptContent(content, Optional.of(recipient), timestamp, Collections.singletonList(result), false, Collections.emptySet());
-      EnvelopeContent syncMessageContent = EnvelopeContent.encrypted(syncMessage, ContentHint.IMPLICIT, Optional.empty());
-
-      sendMessage(localAddress, Optional.empty(), timestamp, syncMessageContent, false, null, false, false); 
-    }
-
-    sendEvents.onSyncMessageSent();
-
-    return result; 
-  }
-
 
     /**
      * Sends a message to a group using client-side fanout.
@@ -580,11 +580,8 @@ public class SignalServiceMessageSender {
             throws IOException, UntrustedIdentityException {
         Content content;
         boolean urgent = false;
-
         if (message.getContacts().isPresent()) {
             content = createMultiDeviceContactsContent(message.getContacts().get().getContactsStream().asStream(), message.getContacts().get().isComplete());
-        } else if (message.getGroups().isPresent()) {
-            content = createMultiDeviceGroupsContent(message.getGroups().get().asStream());
         } else if (message.getRead().isPresent()) {
             content = createMultiDeviceReadContent(message.getRead().get());
             urgent = true;
@@ -605,9 +602,10 @@ public class SignalServiceMessageSender {
         } else if (message.getMessageRequestResponse().isPresent()) {
             content = createMultiDeviceMessageRequestResponseContent(message.getMessageRequestResponse().get());
         } else if (message.getOutgoingPaymentMessage().isPresent()) {
-            LOG.log(Level.SEVERE, "No support for payment message");
-            throw new RuntimeException("No support for payment");
-            //  content = createMultiDeviceOutgoingPaymentContent(message.getOutgoingPaymentMessage().get());
+// no payment support for now
+//      content = createMultiDeviceOutgoingPaymentContent(message.getOutgoingPaymentMessage().get());
+            throw new IOException("Unsupported sync payment message!");
+
         } else if (message.getKeys().isPresent()) {
             content = createMultiDeviceSyncKeysContent(message.getKeys().get());
         } else if (message.getVerified().isPresent()) {
@@ -615,8 +613,12 @@ public class SignalServiceMessageSender {
         } else if (message.getRequest().isPresent()) {
             content = createRequestContent(message.getRequest().get().getRequest());
             urgent = message.getRequest().get().isUrgent();
-        } else if (message.getPniIdentity().isPresent()) {
-            content = createPniIdentityContent(message.getPniIdentity().get());
+        } else if (message.getCallEvent().isPresent()) {
+            content = createCallEventContent(message.getCallEvent().get());
+        } else if (message.getCallLinkUpdate().isPresent()) {
+            content = createCallLinkUpdateContent(message.getCallLinkUpdate().get());
+        } else if (message.getCallLogEvent().isPresent()) {
+            content = createCallLogEventContent(message.getCallLogEvent().get());
         } else {
             throw new IOException("Unsupported sync message!");
         }
@@ -704,7 +706,7 @@ public class SignalServiceMessageSender {
     }
 
     public ResumableUploadSpec getResumableUploadSpec() throws IOException {
-   throw new UnsupportedOperationException("NYI");
+        throw new UnsupportedOperationException("NYI");
 //
 //        AttachmentV3UploadAttributes v3UploadAttributes = null;
 //        Optional<SignalServiceMessagePipe> localPipe = pipe.get();
@@ -900,7 +902,7 @@ public class SignalServiceMessageSender {
                 List<SendMessageResult> messageResults = transformGroupResponseToMessageResults(targetInfo.devices, response, content);
                 return messageResults;
             } catch (ExecutionException ee) {
-                LOG.info("Exception trying to send to group: "+ee);
+                LOG.info("Exception trying to send to group: " + ee);
                 Throwable reason = ee.getCause();
                 if (reason instanceof GroupMismatchedDevicesException) {
                     GroupMismatchedDevicesException e = (GroupMismatchedDevicesException) reason;
@@ -1088,7 +1090,7 @@ public class SignalServiceMessageSender {
             DataMessage.Quote.Builder quoteBuilder = DataMessage.Quote.newBuilder()
                     .setId(message.getQuote().get().getId())
                     .setText(message.getQuote().get().getText())
-                    .setAuthorUuid(message.getQuote().get().getAuthor().toString())
+                    .setAuthorAci(message.getQuote().get().getAuthor().toString())
                     .setType(message.getQuote().get().getType().getProtoType());
             List<SignalServiceDataMessage.Mention> mentions = message.getQuote().get().getMentions();
             if (mentions != null && !mentions.isEmpty()) {
@@ -1096,7 +1098,7 @@ public class SignalServiceMessageSender {
                     quoteBuilder.addBodyRanges(BodyRange.newBuilder()
                             .setStart(mention.getStart())
                             .setLength(mention.getLength())
-                            .setMentionUuid(mention.getServiceId().toString()));
+                            .setMentionAci(mention.getServiceId().toString()));
                 }
 
                 builder.setRequiredProtocolVersion(Math.max(DataMessage.ProtocolVersion.MENTIONS_VALUE, builder.getRequiredProtocolVersion()));
@@ -1140,7 +1142,7 @@ public class SignalServiceMessageSender {
                 builder.addBodyRanges(BodyRange.newBuilder()
                         .setStart(mention.getStart())
                         .setLength(mention.getLength())
-                        .setMentionUuid(mention.getServiceId().toString()));
+                        .setMentionAci(mention.getServiceId().toString()));
             }
             builder.setRequiredProtocolVersion(Math.max(DataMessage.ProtocolVersion.MENTIONS_VALUE, builder.getRequiredProtocolVersion()));
         }
@@ -1175,7 +1177,7 @@ public class SignalServiceMessageSender {
                     .setEmoji(message.getReaction().get().getEmoji())
                     .setRemove(message.getReaction().get().isRemove())
                     .setTargetSentTimestamp(message.getReaction().get().getTargetSentTimestamp())
-                    .setTargetAuthorUuid(message.getReaction().get().getTargetAuthor().toString());
+                    .setTargetAuthorAci(message.getReaction().get().getTargetAuthor().toString());
             builder.setReaction(reactionBuilder.build());
             builder.setRequiredProtocolVersion(Math.max(DataMessage.ProtocolVersion.REACTIONS_VALUE, builder.getRequiredProtocolVersion()));
         }
@@ -1194,7 +1196,7 @@ public class SignalServiceMessageSender {
             SignalServiceDataMessage.StoryContext storyContext = message.getStoryContext().get();
 
             builder.setStoryContext(DataMessage.StoryContext.newBuilder()
-                    .setAuthorUuid(storyContext.getAuthorServiceId().toString())
+                    .setAuthorAci(storyContext.getAuthorServiceId().toString())
                     .setSentTimestamp(storyContext.getSentTimestamp()));
         }
 
@@ -1317,15 +1319,6 @@ public class SignalServiceMessageSender {
         return container.setSyncMessage(builder).build();
     }
 
-    private Content createMultiDeviceGroupsContent(SignalServiceAttachmentStream groups) throws IOException {
-        Content.Builder container = Content.newBuilder();
-        SyncMessage.Builder builder = createSyncMessageBuilder();
-        builder.setGroups(SyncMessage.Groups.newBuilder()
-                .setBlob(createAttachmentPointer(groups)));
-
-        return container.setSyncMessage(builder).build();
-    }
-
     private Content createMultiDeviceSentTranscriptContent(SentTranscriptMessage transcript, boolean unidentifiedAccess) throws IOException {
         SignalServiceAddress address = transcript.getDestination().get();
         Content content = createMessageContent(transcript);
@@ -1354,7 +1347,7 @@ public class SignalServiceMessageSender {
         for (SendMessageResult result : sendMessageResults) {
             if (result.getSuccess() != null) {
                 sentMessage.addUnidentifiedStatus(SyncMessage.Sent.UnidentifiedDeliveryStatus.newBuilder()
-                        .setDestinationUuid(result.getAddress().getServiceId().toString())
+                        .setDestinationServiceId(result.getAddress().getServiceId().toString())
                         .setUnidentified(result.getSuccess().isUnidentified())
                         .build());
 
@@ -1362,7 +1355,7 @@ public class SignalServiceMessageSender {
         }
 
         if (recipient.isPresent()) {
-            sentMessage.setDestinationUuid(recipient.get().getServiceId().toString());
+            sentMessage.setDestinationServiceId(recipient.get().getServiceId().toString());
             if (recipient.get().getNumber().isPresent()) {
                 sentMessage.setDestinationE164(recipient.get().getNumber().get());
             }
@@ -1396,7 +1389,7 @@ public class SignalServiceMessageSender {
     private SyncMessage.Sent.StoryMessageRecipient createStoryMessageRecipient(SignalServiceStoryMessageRecipient storyMessageRecipient) {
         return SyncMessage.Sent.StoryMessageRecipient.newBuilder()
                 .addAllDistributionListIds(storyMessageRecipient.getDistributionListIds())
-                .setDestinationUuid(storyMessageRecipient.getSignalServiceAddress().getIdentifier())
+                .setDestinationServiceId(storyMessageRecipient.getSignalServiceAddress().getIdentifier())
                 .setIsAllowedToReply(storyMessageRecipient.isAllowedToReply())
                 .build();
     }
@@ -1408,7 +1401,7 @@ public class SignalServiceMessageSender {
         for (ReadMessage readMessage : readMessages) {
             builder.addRead(SyncMessage.Read.newBuilder()
                     .setTimestamp(readMessage.getTimestamp())
-                    .setSenderUuid(readMessage.getSender().toString()));
+                    .setSenderAci(readMessage.getSender().toString()));
         }
 
         return container.setSyncMessage(builder).build();
@@ -1421,7 +1414,7 @@ public class SignalServiceMessageSender {
         for (ViewedMessage readMessage : readMessages) {
             builder.addViewed(SyncMessage.Viewed.newBuilder()
                     .setTimestamp(readMessage.getTimestamp())
-                    .setSenderUuid(readMessage.getSender().toString()));
+                    .setSenderAci(readMessage.getSender().toString()));
         }
 
         return container.setSyncMessage(builder).build();
@@ -1433,7 +1426,7 @@ public class SignalServiceMessageSender {
 
         builder.setViewOnceOpen(SyncMessage.ViewOnceOpen.newBuilder()
                 .setTimestamp(readMessage.getTimestamp())
-                .setSenderUuid(readMessage.getSender().toString()));
+                .setSenderAci(readMessage.getSender().toString()));
 
         return container.setSyncMessage(builder).build();
     }
@@ -1443,7 +1436,7 @@ public class SignalServiceMessageSender {
         SyncMessage.Builder syncMessage = createSyncMessageBuilder();
         SyncMessage.Blocked.Builder blockedMessage = SyncMessage.Blocked.newBuilder();
         for (SignalServiceAddress address : blocked.getAddresses()) {
-            blockedMessage.addUuids(address.getServiceId().toString());
+            blockedMessage.addAcis(address.getServiceId().toString());
             if (address.getNumber().isPresent()) {
                 blockedMessage.addNumbers(address.getNumber().get());
             }
@@ -1543,7 +1536,7 @@ public class SignalServiceMessageSender {
             responseMessage.setGroupId(ByteString.copyFrom(message.getGroupId().get()));
         }
         if (message.getPerson().isPresent()) {
-            responseMessage.setThreadUuid(message.getPerson().get().toString());
+            responseMessage.setThreadAci(message.getPerson().get().toString());
         }
 
         switch (message.getType()) {
@@ -1591,7 +1584,7 @@ public class SignalServiceMessageSender {
 
         verifiedMessageBuilder.setNullMessage(ByteString.copyFrom(nullMessage));
         verifiedMessageBuilder.setIdentityKey(ByteString.copyFrom(verifiedMessage.getIdentityKey().serialize()));
-        verifiedMessageBuilder.setDestinationUuid(verifiedMessage.getDestination().getServiceId().toString());
+        verifiedMessageBuilder.setDestinationAci(verifiedMessage.getDestination().getServiceId().toString());
 
         switch (verifiedMessage.getVerified()) {
             case DEFAULT:
@@ -1622,9 +1615,23 @@ public class SignalServiceMessageSender {
         return container.setSyncMessage(builder).build();
     }
 
-    private Content createPniIdentityContent(SyncMessage.PniIdentity proto) {
+    private Content createCallEventContent(SyncMessage.CallEvent proto) {
         Content.Builder container = Content.newBuilder();
-        SyncMessage.Builder builder = SyncMessage.newBuilder().setPniIdentity(proto);
+        SyncMessage.Builder builder = createSyncMessageBuilder().setCallEvent(proto);
+
+        return container.setSyncMessage(builder).build();
+    }
+
+    private Content createCallLinkUpdateContent(SyncMessage.CallLinkUpdate proto) {
+        Content.Builder container = Content.newBuilder();
+        SyncMessage.Builder builder = createSyncMessageBuilder().setCallLinkUpdate(proto);
+
+        return container.setSyncMessage(builder).build();
+    }
+
+    private Content createCallLogEventContent(SyncMessage.CallLogEvent proto) {
+        Content.Builder container = Content.newBuilder();
+        SyncMessage.Builder builder = createSyncMessageBuilder().setCallLogEvent(proto);
 
         return container.setSyncMessage(builder).build();
     }
@@ -1852,23 +1859,22 @@ public class SignalServiceMessageSender {
         return results;
     }
 
-  private SignalServiceSyncMessage createSelfSendSyncMessageForStory(SignalServiceStoryMessage message,
-                                                                     long sentTimestamp,
-                                                                     boolean isRecipientUpdate,
-                                                                     Set<SignalServiceStoryMessageRecipient> manifest)
-  {
-    SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(localAddress),
-                                                                 sentTimestamp,
-                                                                 Optional.empty(),
-                                                                 0,
-                                                                 Collections.singletonMap(localAddress.getServiceId(), false),
-                                                                 isRecipientUpdate,
-                                                                 Optional.of(message),
-                                                                 manifest,
-                                                                 Optional.empty());
+    private SignalServiceSyncMessage createSelfSendSyncMessageForStory(SignalServiceStoryMessage message,
+            long sentTimestamp,
+            boolean isRecipientUpdate,
+            Set<SignalServiceStoryMessageRecipient> manifest) {
+        SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(localAddress),
+                sentTimestamp,
+                Optional.empty(),
+                0,
+                Collections.singletonMap(localAddress.getServiceId(), false),
+                isRecipientUpdate,
+                Optional.of(message),
+                manifest,
+                Optional.empty());
 
-    return SignalServiceSyncMessage.forSentTranscript(transcript);
-  }
+        return SignalServiceSyncMessage.forSentTranscript(transcript);
+    }
 
     private List<SendMessageResult> sendMessage(List<SignalServiceAddress> recipients,
             List<Optional<UnidentifiedAccess>> unidentifiedAccess,
@@ -1967,7 +1973,7 @@ public class SignalServiceMessageSender {
             throws UntrustedIdentityException, IOException {
         enforceMaxContentSize(content);
         long startTime = System.currentTimeMillis();
-LOG.info("UNA = "+unidentifiedAccess);
+        LOG.info("UNA = " + unidentifiedAccess);
         for (int i = 0; i < RETRY_COUNT; i++) {
             if (cancelationSignal != null && cancelationSignal.isCanceled()) {
                 throw new CancelationException();
@@ -2019,7 +2025,7 @@ LOG.info("UNA = "+unidentifiedAccess);
                     SendMessageResponse response = sendDirectOverStream.get(10, TimeUnit.SECONDS);
                     return SendMessageResult.success(recipient, messages.getDevices(), unidentifiedAccess.isPresent(), response.getNeedsSync() || aciStore.isMultiDevice(), System.currentTimeMillis() - startTime, content.getContent());
                 } catch (ExecutionException ee) {
-                    LOG.info("Catched execution exception, throw root which is "+ee.getCause());
+                    LOG.info("Catched execution exception, throw root which is " + ee.getCause());
                     throw ee.getCause();
                 }
 //                SendMessageResponse response = socket.sendMessage(messages, unidentifiedAccess, story);
@@ -2045,11 +2051,10 @@ LOG.info("UNA = "+unidentifiedAccess);
                 Log.w(TAG, ste);
                 handleStaleDevices(recipient, ste.getStaleDevices());
                 LOG.info("Got stale devices, handled those!");
-            }
-            catch(Throwable t) {
+            } catch (Throwable t) {
                 LOG.info("CATCHING a throwable.");
-                        LOG.info("t = "+t);
-                        t.printStackTrace();
+                LOG.info("t = " + t);
+                t.printStackTrace();
             }
         }
 
