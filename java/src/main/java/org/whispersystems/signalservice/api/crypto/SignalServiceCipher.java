@@ -57,6 +57,7 @@ import org.whispersystems.signalservice.internal.push.SignalServiceProtos.Envelo
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 /**
  * This is used to encrypt + decrypt received envelopes.
@@ -71,6 +72,7 @@ public class SignalServiceCipher {
   private final SignalServiceAddress localAddress;
   private final int                  localDeviceId;
   private final CertificateValidator certificateValidator;
+    private static final Logger LOG = Logger.getLogger(SignalServiceCipher.class.getName());
 
   public SignalServiceCipher(SignalServiceAddress localAddress,
                              int localDeviceId,
@@ -132,10 +134,13 @@ public class SignalServiceCipher {
              SelfSendException, InvalidMessageStructureException
   {
     try {
+        System.err.println("SSC1");
       if (envelope.hasContent()) {
+          System.err.println("SSC2");
         Plaintext                   plaintext = decryptInternal(envelope, serverDeliveredTimestamp);
+          System.err.println("SSC3");
         SignalServiceProtos.Content content   = SignalServiceProtos.Content.parseFrom(plaintext.getData());
-
+          System.err.println("SSC4");
         return new SignalServiceCipherResult(
             content,
             new EnvelopeMetadata(
@@ -148,9 +153,11 @@ public class SignalServiceCipher {
             )
         );
       } else {
+          System.err.println("SSC5");
         return null;
       }
     } catch (InvalidProtocolBufferException e) {
+        e.printStackTrace();
       throw new InvalidMetadataMessageException(e);
     }
   }
@@ -167,7 +174,7 @@ public class SignalServiceCipher {
 
       byte[]                paddedMessage;
       SignalServiceMetadata metadata;
-
+LOG.info("decryptInternal, envelope = "+envelope+" and hasssid ="+envelope.hasSourceServiceId()+" and type = "+envelope.getType().getNumber() );
       if (!envelope.hasSourceServiceId() && envelope.getType().getNumber() != Envelope.Type.UNIDENTIFIED_SENDER_VALUE) {
         throw new InvalidMessageStructureException("Non-UD envelope is missing a UUID!");
       }
@@ -190,10 +197,16 @@ public class SignalServiceCipher {
         paddedMessage = new PlaintextContent(envelope.getContent().toByteArray()).getBody();
         metadata      = new SignalServiceMetadata(getSourceAddress(envelope), envelope.getSourceDevice(), envelope.getTimestamp(), envelope.getServerTimestamp(), serverDeliveredTimestamp, false, envelope.getServerGuid(), Optional.empty(), envelope.getDestinationServiceId());
       } else if (envelope.getType().getNumber() == Envelope.Type.UNIDENTIFIED_SENDER_VALUE) {
-        SignalSealedSessionCipher sealedSessionCipher = new SignalSealedSessionCipher(sessionLock, new SealedSessionCipher(signalProtocolStore, localAddress.getServiceId().getRawUuid(), localAddress.getNumber().orElse(null), localDeviceId));
-        DecryptionResult          result              = sealedSessionCipher.decrypt(certificateValidator, envelope.getContent().toByteArray(), envelope.getServerTimestamp());
-        SignalServiceAddress      resultAddress       = new SignalServiceAddress(ACI.parseOrThrow(result.getSenderUuid()), result.getSenderE164());
-        Optional<byte[]>          groupId             = result.getGroupId();
+          System.err.println("SSC A1");
+          SignalSealedSessionCipher sealedSessionCipher = new SignalSealedSessionCipher(sessionLock, new SealedSessionCipher(signalProtocolStore, localAddress.getServiceId().getRawUuid(), localAddress.getNumber().orElse(null), localDeviceId));
+          System.err.println("SSC A2");
+
+          DecryptionResult          result              = sealedSessionCipher.decrypt(certificateValidator, envelope.getContent().toByteArray(), envelope.getServerTimestamp());
+       System.err.println("SSC A3");
+
+          SignalServiceAddress      resultAddress       = new SignalServiceAddress(ACI.parseOrThrow(result.getSenderUuid()), result.getSenderE164());
+        System.err.println("SSC A4");
+Optional<byte[]>          groupId             = result.getGroupId();
         boolean                   needsReceipt        = true;
 
         if (envelope.hasSourceServiceId()) {
@@ -230,6 +243,7 @@ public class SignalServiceCipher {
     } catch (InvalidVersionException e) {
       throw new ProtocolInvalidVersionException(e, envelope.getSourceServiceId(), envelope.getSourceDevice());
     } catch (NoSessionException e) {
+        e.printStackTrace();
       throw new ProtocolNoSessionException(e, envelope.getSourceServiceId(), envelope.getSourceDevice());
     }
   }
