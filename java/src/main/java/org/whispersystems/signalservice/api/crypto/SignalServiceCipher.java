@@ -134,13 +134,9 @@ public class SignalServiceCipher {
              SelfSendException, InvalidMessageStructureException
   {
     try {
-        System.err.println("SSC1");
       if (envelope.hasContent()) {
-          System.err.println("SSC2");
         Plaintext                   plaintext = decryptInternal(envelope, serverDeliveredTimestamp);
-          System.err.println("SSC3");
         SignalServiceProtos.Content content   = SignalServiceProtos.Content.parseFrom(plaintext.getData());
-          System.err.println("SSC4");
         return new SignalServiceCipherResult(
             content,
             new EnvelopeMetadata(
@@ -153,7 +149,6 @@ public class SignalServiceCipher {
             )
         );
       } else {
-          System.err.println("SSC5");
         return null;
       }
     } catch (InvalidProtocolBufferException e) {
@@ -174,7 +169,7 @@ public class SignalServiceCipher {
 
       byte[]                paddedMessage;
       SignalServiceMetadata metadata;
-LOG.info("decryptInternal, envelope = "+envelope+" and hasssid ="+envelope.hasSourceServiceId()+" and type = "+envelope.getType().getNumber() );
+LOG.info("decryptInternal, envelopeType= "+envelope.getType()+" and hasSourceServiceId ="+envelope.hasSourceServiceId()+" and type = "+envelope.getType().getNumber() );
       if (!envelope.hasSourceServiceId() && envelope.getType().getNumber() != Envelope.Type.UNIDENTIFIED_SENDER_VALUE) {
         throw new InvalidMessageStructureException("Non-UD envelope is missing a UUID!");
       }

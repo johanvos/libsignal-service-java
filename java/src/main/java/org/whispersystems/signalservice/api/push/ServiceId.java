@@ -61,7 +61,6 @@ public class ServiceId {
 
     public static ServiceId parseOrThrow(byte[] raw) {
         if (raw == null) return null;
-        System.err.println("BYTEARRAYSIZE = "+raw.length);
         return from(UuidUtil.parseOrThrow(raw));
     }
 
@@ -158,31 +157,23 @@ public class ServiceId {
         public static final ACI UNKNOWN = ACI.from(UuidUtil.UNKNOWN_UUID);
 
         public static ACI from(UUID uuid) {
-            System.err.println("ACI create from uuid "+uuid);
             Aci saci = new Aci(uuid);
             return new ACI(uuid);
         }
 
         public static ACI from(ServiceId serviceId) {
-            System.err.println("ACI create from serviceId "+serviceId);
             return new ACI(serviceId.uuid());
         }
 
         public static ACI fromNullable(ServiceId serviceId) {
-                        System.err.println("ACI create from NserviceId "+serviceId);
-
             return serviceId != null ? new ACI(serviceId.uuid()) : null;
         }
 
         public static ACI parseOrThrow(String raw) {
-                   System.err.println("ACI create from Nraw "+raw);
-
             return from(UUID.fromString(raw));
         }
 
         public static ACI parseOrNull(String raw) {
-                               System.err.println("ACI create from NNraw "+raw);
-
             UUID uuid = UuidUtil.parseOrNull(raw);
             return uuid != null ? from(uuid) : null;
         }
@@ -202,7 +193,6 @@ public class ServiceId {
         }
         
         public org.signal.libsignal.protocol.ServiceId.Aci getLibSignalAci() {
-            System.err.println("ACI glsa, ssid = "+this.ssid);
             return (org.signal.libsignal.protocol.ServiceId.Aci)this.ssid;
         }
 
