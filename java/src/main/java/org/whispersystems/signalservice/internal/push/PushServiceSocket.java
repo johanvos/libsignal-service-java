@@ -1762,7 +1762,12 @@ public class PushServiceSocket {
         int statusCode = -1;
         Response response = null;
         try {
+            //        try {
             response = client.sendRequest(hrBuilder.build(), rawBytes);
+        } catch (IOException ex) {
+            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
+        throw new PushNetworkException(ex);
+        }
             statusCode = response.getStatusCode();
             
             if (response.isSuccessful() && response.getStatusCode() != 204) {
@@ -1783,7 +1788,9 @@ public class PushServiceSocket {
                     throw new NotFoundException("Not found");
                 case 409:
                     if (response.body() != null) {
-                        throw new ContactManifestMismatchException(readBodyBytes(response.body()));
+                byte[] readBodyBytes = readBodyBytes(response.body());
+                        System.err.println("got body bytes... "+readBodyBytes.length);
+                        throw new ContactManifestMismatchException(readBodyBytes);
                     } else {
                         throw new ConflictException();
                     }
@@ -1792,9 +1799,9 @@ public class PushServiceSocket {
                 case 499:
                     throw new DeprecatedVersionException();
             }
-        } catch (IOException e) {
-            throw new PushNetworkException(e);
-        } 
+//        } catch (IOException e) {
+//            throw new PushNetworkException(e);
+//        } 
         throw new NonSuccessfulResponseCodeException(statusCode, "Response: " + response);
     }
 

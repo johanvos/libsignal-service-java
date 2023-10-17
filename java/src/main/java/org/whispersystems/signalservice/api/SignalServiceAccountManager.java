@@ -707,9 +707,11 @@ public class SignalServiceAccountManager {
       }
     }
 
+      System.err.println("[JVDBG] WRITE storage");
     Optional<StorageManifest> conflict = this.pushServiceSocket.writeStorageContacts(authToken, writeBuilder.build());
-
+      System.err.println("[JVDBG] Conflict? "+conflict);
     if (conflict.isPresent()) {
+        System.err.println("[JVDBG] version = "+conflict.get().getVersion());
       StorageManifestKey conflictKey       = storageKey.deriveManifestKey(conflict.get().getVersion());
       byte[]             rawManifestRecord = SignalStorageCipher.decrypt(conflictKey, conflict.get().getValue().toByteArray());
       ManifestRecord     record            = ManifestRecord.parseFrom(rawManifestRecord);
@@ -719,8 +721,10 @@ public class SignalServiceAccountManager {
         ids.add(StorageId.forType(id.getRaw().toByteArray(), id.getTypeValue()));
       }
 
-      SignalStorageManifest conflictManifest = new SignalStorageManifest(record.getVersion(), ids);
-
+      SignalStorageManifest conflictManifest = new SignalStorageManifest(record.getVersion(), record.getSourceDevice(), ids);
+        System.err.println("[JVDBG] CONFLICT");
+        System.err.println("[JVDBG] ck = "+conflictKey);
+        System.err.println("[JVDBG] ids = "+ids);
       return Optional.of(conflictManifest);
     } else {
       return Optional.empty();
