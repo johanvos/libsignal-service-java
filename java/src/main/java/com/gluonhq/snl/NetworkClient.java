@@ -531,8 +531,6 @@ public abstract class NetworkClient {
                 case 409:
                     if (uri.getHost().indexOf("storage") > -1) {
                         LOG.info("Got a 409 exception in a storage request, ignore in this layer");
-                    LOG.info("Respbody = "+response.body());
-                    LOG.info("contents = "+response.body().bytes());
                     } else {
                         LOG.info("Got a 409 exception, throw MMDE");
                         MismatchedDevices mismatchedDevices = readResponseJson(response, MismatchedDevices.class);

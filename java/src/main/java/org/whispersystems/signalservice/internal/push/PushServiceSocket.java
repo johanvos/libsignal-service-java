@@ -1762,46 +1762,40 @@ public class PushServiceSocket {
         int statusCode = -1;
         Response response = null;
         try {
-            //        try {
             response = client.sendRequest(hrBuilder.build(), rawBytes);
         } catch (IOException ex) {
-            Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
-        throw new PushNetworkException(ex);
+            LOG.log(Level.SEVERE, null, ex);
+            throw new PushNetworkException(ex);
         }
-            statusCode = response.getStatusCode();
-            
-            if (response.isSuccessful() && response.getStatusCode() != 204) {
-                return response;
-            }
+        statusCode = response.getStatusCode();
 
-            ResponseBody responseBody = response.body();
+        if (response.isSuccessful() && response.getStatusCode() != 204) {
+            return response;
+        }
 
-            responseCodeHandler.handle(response.getStatusCode(), responseBody, response::header);
+        ResponseBody responseBody = response.body();
 
-            switch (response.getStatusCode()) {
-                case 204:
-                    throw new NoContentException("No content!");
-                case 401:
-                case 403:
-                    throw new AuthorizationFailedException(response.getStatusCode(), "Authorization failed!");
-                case 404:
-                    throw new NotFoundException("Not found");
-                case 409:
-                    if (response.body() != null) {
-                byte[] readBodyBytes = readBodyBytes(response.body());
-                        System.err.println("got body bytes... "+readBodyBytes.length);
-                        throw new ContactManifestMismatchException(readBodyBytes);
-                    } else {
-                        throw new ConflictException();
-                    }
-                case 429:
-                    throw new RateLimitException(response.getStatusCode(), "Rate limit exceeded: " + response.getStatusCode());
-                case 499:
-                    throw new DeprecatedVersionException();
-            }
-//        } catch (IOException e) {
-//            throw new PushNetworkException(e);
-//        } 
+        responseCodeHandler.handle(response.getStatusCode(), responseBody, response::header);
+
+        switch (response.getStatusCode()) {
+            case 204:
+                throw new NoContentException("No content!");
+            case 401:
+            case 403:
+                throw new AuthorizationFailedException(response.getStatusCode(), "Authorization failed!");
+            case 404:
+                throw new NotFoundException("Not found");
+            case 409:
+                if (response.body() != null) {
+                    throw new ContactManifestMismatchException(readBodyBytes(response.body()));
+                } else {
+                    throw new ConflictException();
+                }
+            case 429:
+                throw new RateLimitException(response.getStatusCode(), "Rate limit exceeded: " + response.getStatusCode());
+            case 499:
+                throw new DeprecatedVersionException();
+        }
         throw new NonSuccessfulResponseCodeException(statusCode, "Response: " + response);
     }
 
