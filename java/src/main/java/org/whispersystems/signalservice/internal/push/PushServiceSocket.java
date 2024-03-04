@@ -1560,7 +1560,6 @@ public class PushServiceSocket {
             boolean doNotAddAuthenticationOrUnidentifiedAccessKey,
             String rawBody)
             throws IOException {
-        System.err.println("HEADERS = "+headers);
         HttpRequest serviceRequest = buildServiceRequest(urlFragment, method, body, headers, unidentifiedAccess, doNotAddAuthenticationOrUnidentifiedAccessKey);
         NetworkClient client = buildNetworkClient(unidentifiedAccess.isPresent());
         byte[] rawBytes = (body == null ? new byte[0] : body.getRawBytes());

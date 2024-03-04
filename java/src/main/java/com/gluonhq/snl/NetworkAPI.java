@@ -153,6 +153,34 @@ public class NetworkAPI {
         }
     }
 
+    /**
+     * Return the ACI (as a String) that belongs to the user with the specified usernamehash
+     * @param hash
+     * @return an ACI, or null if no such user is found.
+     */
+    public static String getAciByUsernameHash(String hash) {
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/accounts/username_hash/" + hash);
+            Map<String, List<String>> headers = new HashMap<>();
+            headers.put("content-type", List.of("application/json"));
+
+            Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            LOG.info("response code = " + response.getStatusCode());
+            if (response.getStatusCode()!= 200) {
+                LOG.info("No ACI linked to this username, statuscode "+response.getStatusCode());
+                return null;
+            }
+            LOG.info("and body = " + response.body().string());
+            String answer = response.body().string();
+            int sep = answer.indexOf(":");
+            String aci = answer.substring(sep+2, answer.length() -2);
+            return aci;
+        } catch (URISyntaxException | IOException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+            return null;
+        }
+    }
+
     public static PreKeyResponse getPreKey(String uuid, int deviceId) throws IOException {
         try {
             URI uri = new URI("xhttps://"+HOST+"/v2/keys/" + uuid + "/" + deviceId);

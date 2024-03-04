@@ -2324,6 +2324,7 @@ public class SignalServiceMessageSender {
                     throw new UntrustedIdentityException("Untrusted identity key!", recipient.getIdentifier(), preKey.getIdentityKey());
                 }
             }
+            LOG.info("Done handling mismatchedDevices");
         } catch (InvalidKeyException e) {
             throw new IOException(e);
         }
@@ -2332,6 +2333,7 @@ public class SignalServiceMessageSender {
     private void handleStaleDevices(SignalServiceAddress recipient, StaleDevices staleDevices) {
         LOG.warning("Address: " + recipient.getIdentifier() + ", StaleDevices: " + staleDevices.getStaleDevices());
         archiveSessions(recipient, staleDevices.getStaleDevices());
+        LOG.info("Handled stale device");
     }
 
     private void archiveSessions(SignalServiceAddress recipient, List<Integer> devices) {
