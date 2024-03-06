@@ -304,7 +304,7 @@ public final class SignalContactRecord implements SignalRecord {
         this.builder = ContactRecord.newBuilder();
       }
 
-      builder.setAci(aci.toString());
+      builder.setAci(aci == null ? "" : aci.toString());
     }
 
     public Builder setE164(String e164) {
