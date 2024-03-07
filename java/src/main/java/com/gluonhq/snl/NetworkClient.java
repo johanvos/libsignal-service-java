@@ -46,6 +46,7 @@ import org.whispersystems.signalservice.internal.push.AuthCredentials;
 import org.whispersystems.signalservice.internal.push.DeviceLimit;
 import org.whispersystems.signalservice.internal.push.DeviceLimitExceededException;
 import org.whispersystems.signalservice.internal.push.GroupMismatchedDevices;
+import org.whispersystems.signalservice.internal.push.GroupStaleDevices;
 import org.whispersystems.signalservice.internal.push.LockedException;
 import org.whispersystems.signalservice.internal.push.MismatchedDevices;
 import org.whispersystems.signalservice.internal.push.OutgoingPushMessageList;
@@ -55,6 +56,7 @@ import org.whispersystems.signalservice.internal.push.SendGroupMessageResponse;
 import org.whispersystems.signalservice.internal.push.SendMessageResponse;
 import org.whispersystems.signalservice.internal.push.StaleDevices;
 import org.whispersystems.signalservice.internal.push.exceptions.GroupMismatchedDevicesException;
+import org.whispersystems.signalservice.internal.push.exceptions.GroupStaleDevicesException;
 import org.whispersystems.signalservice.internal.push.exceptions.MismatchedDevicesException;
 import org.whispersystems.signalservice.internal.push.exceptions.StaleDevicesException;
 import org.whispersystems.signalservice.internal.util.JsonUtil;
@@ -209,7 +211,9 @@ public abstract class NetworkClient {
             } else if (value.getStatus() == 409) {
                 GroupMismatchedDevices[] mismatchedDevices = JsonUtil.fromJsonResponse(value.getBody(), GroupMismatchedDevices[].class);
                 throw new GroupMismatchedDevicesException(mismatchedDevices);
-//        throw new UnregisteredUserException(list.getDestination(), new NotFoundException("not found"));
+            } else if (value.getStatus() == 410) {
+                GroupStaleDevices[] staleDevices = JsonUtil.fromJsonResponse(value.getBody(), GroupStaleDevices[].class);
+                throw new GroupStaleDevicesException(staleDevices);
             } else if (value.getStatus() == 508) {
                 throw new ServerRejectedException();
             } else if (value.getStatus() < 200 || value.getStatus() >= 300) {
