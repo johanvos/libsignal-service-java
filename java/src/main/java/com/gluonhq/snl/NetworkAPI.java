@@ -30,6 +30,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.SignedPreKeyEntity;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.util.CredentialsProvider;
+import org.whispersystems.signalservice.internal.configuration.SignalUrl;
 import org.whispersystems.signalservice.internal.push.PreKeyEntity;
 import org.whispersystems.signalservice.internal.push.PreKeyResponse;
 import org.whispersystems.signalservice.internal.push.PreKeyResponseItem;
@@ -42,7 +43,9 @@ import org.whispersystems.util.Base64;
 public class NetworkAPI {
 
     public static Optional<CredentialsProvider> cp;
+    public static SignalUrl signalUrl = null;
     static String HOST = "chat.signal.org";
+    private static boolean local = false;
 
     static private NetworkClient networkClient;
     private static final Logger LOG = Logger.getLogger(NetworkAPI.class.getName());
@@ -50,10 +53,14 @@ public class NetworkAPI {
         if ("true".equals(System.getProperty("wave.staging"))) {
             HOST = "chat.staging.signal.org";
         }
+        if ("true".equals(System.getProperty("wave.local"))) {
+            local = true;
+            HOST = "localhost:8079";
+        }
     }
     private static NetworkClient getClient() {
         if (networkClient == null) {
-            networkClient = NetworkClient.createNetworkClient(cp);
+            networkClient = NetworkClient.createNetworkClient(signalUrl, cp);
         }
         return networkClient;
     }
@@ -69,6 +76,9 @@ public class NetworkAPI {
     public static byte[] getSenderCertificate(CredentialsProvider cred) throws IOException {
         try {
             URI uri = new URI("xhttps://"+HOST+"/v1/certificate/delivery");
+            if (local) {
+                uri = new URI("xhttp://"+HOST+"/v1/certificate/delivery");
+            }
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
             Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
@@ -246,6 +256,25 @@ public class NetworkAPI {
             LOG.log(Level.SEVERE, null, ex);
             throw new IOException(ex);
 
+        }
+    }
+
+    /**
+     * For testing only!
+     * The device that wants to be linked generates a URL that should be scanned
+     * by the main device. In testing, we want the main device to get access to
+     * this URL without scanning. This call allows that.
+     * @param uuid
+     * @param deviceId
+     * @throws IOException
+     */
+    public static void sendProvisionUrl(String url) throws IOException {
+        try {
+            URI uri = new URI("http://"+HOST+"/v1/main/provisionurl/" + url);
+            Map<String, List<String>> headers = new HashMap<>();
+            Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

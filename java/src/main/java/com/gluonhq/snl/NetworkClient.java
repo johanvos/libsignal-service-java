@@ -98,8 +98,8 @@ public abstract class NetworkClient {
     private static final String SERVER_DELIVERED_TIMESTAMP_HEADER = "X-Signal-Timestamp";
     private boolean websocketCreated = false;
     
-    public static NetworkClient createNetworkClient(Optional<CredentialsProvider> cp) {
-        return createNetworkClient(null, cp, null, Optional.empty(), false);
+    public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp) {
+        return createNetworkClient(url, cp, null, Optional.empty(), false);
     }
 
     public static NetworkClient createNetworkClient(SignalUrl url, String agent, boolean allowStories) {
@@ -109,7 +109,7 @@ public abstract class NetworkClient {
     public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String agent, Optional<ConnectivityListener> cl, boolean allowStories) {
         String property = System.getProperty("wave.quic", "true");
         boolean useQuic = "true".equals(property.toLowerCase());
-        LOG.info("Creating Networkclient, using quic? "+ useQuic);
+        LOG.info("Creating Networkclient with url " + (url != null ? url.getUrl() : "NULL") +", using quic? "+ useQuic);
         if (useQuic) {
             return new QuicNetworkClient(url, cp, agent, cl, allowStories);
         } else {
