@@ -278,6 +278,39 @@ public class NetworkAPI {
         }
     }
 
+    public static String enableBackup(String context) {
+        LOG.info("Enabling backup...");
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/archives/backupid");
+            Map<String, List<String>> headers = new HashMap<>();
+            headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
+            headers.put("content-type", List.of("application/json"));
+            String body = "{\"backupAuthCredentialRequest\":\"" + context + "\"\n}";
+            Response response = getClient().sendRequest(uri, "PUT", body.getBytes(), headers);
+            LOG.info("response code = " + response.getStatusCode());
+            return response.body().string();
+        } catch (URISyntaxException | IOException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+            return null;
+        }
+    }
+
+    public static String getBackupAuthCredentials(long startSeconds, long endSeconds) {
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/archives/auth?redemptionStartSeconds="
+                    +startSeconds+"&redemptionEndSeconds="+endSeconds);
+            LOG.info("get backup authcredenials from/to with uri = "+uri);
+            Map<String, List<String>> headers = new HashMap<>();
+            headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
+            headers.put("content-type", List.of("application/json"));
+            Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            LOG.info("response code = " + response.getStatusCode());
+            return response.body().string();
+        } catch (URISyntaxException | IOException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+            return null;
+        } 
+    }
     private static String getAuthorizationHeader(CredentialsProvider credentialsProvider) {
         try {
             String identifier = credentialsProvider.getAci() != null ? credentialsProvider.getAci().toString() : credentialsProvider.getE164();

@@ -19,6 +19,7 @@ module org.whispersystems.service {
     exports org.whispersystems.signalservice.internal.webrtc;
     exports org.whispersystems.signalservice.internal.websocket;
     exports org.whispersystems.signalservice.api;
+    exports org.whispersystems.signalservice.api.backup;
     exports org.whispersystems.signalservice.api.crypto;
     exports org.whispersystems.signalservice.api.groupsv2;
     exports org.whispersystems.signalservice.api.kbs;
