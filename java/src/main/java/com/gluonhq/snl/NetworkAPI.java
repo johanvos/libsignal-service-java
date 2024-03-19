@@ -280,6 +280,7 @@ public class NetworkAPI {
         }
     }
 
+    // === BACKUP ===
     public static String enableBackup(String context) {
         LOG.info("Enabling backup...");
         try {
@@ -338,6 +339,30 @@ public class NetworkAPI {
         }
         return response.body().string();
     }
+
+    public static String setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+        Response response = null;
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/archives/keys");
+            String key = Base64.encodeBytes(publicKey.serialize());
+            String body = "{\"backupIdPublicKey\": \"" + key + "\"}";
+            LOG.info("SEND BODY: " + body);
+            Map<String, List<String>> headers = new HashMap<>();
+            headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
+            headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
+            headers.put("content-type", List.of("application/json"));
+            response = getClient().sendRequest(uri, "PUT", body.getBytes(), headers);
+        } catch (URISyntaxException | IOException ex) {
+            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        LOG.info("response code = " + response.getStatusCode() + " and body = " + response.body().string());
+        if (response.getStatusCode() != 200) {
+            throw new NonSuccessfulResponseCodeException(response.getStatusCode());
+        }
+        return response.body().string();
+    }
+
+    // === END BACKUP ===
 
     private static String getAuthorizationHeader(CredentialsProvider credentialsProvider) {
         try {
