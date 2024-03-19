@@ -24,11 +24,13 @@ import org.signal.libsignal.protocol.IdentityKey;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ecc.ECPublicKey;
 import org.signal.libsignal.usernames.Username;
+import org.whispersystems.signalservice.api.ArchiveCredentialPresentation;
 import org.whispersystems.signalservice.api.groupsv2.CredentialResponse;
 import org.whispersystems.signalservice.api.groupsv2.TemporalCredential;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.SignedPreKeyEntity;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
+import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
 import org.whispersystems.signalservice.api.util.CredentialsProvider;
 import org.whispersystems.signalservice.internal.configuration.SignalUrl;
 import org.whispersystems.signalservice.internal.push.PreKeyEntity;
@@ -295,7 +297,8 @@ public class NetworkAPI {
         }
     }
 
-    public static String getBackupAuthCredentials(long startSeconds, long endSeconds) {
+    public static String getBackupAuthCredentials(long startSeconds, long endSeconds) throws NonSuccessfulResponseCodeException {
+        int statusCode = 0;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives/auth?redemptionStartSeconds="
                     +startSeconds+"&redemptionEndSeconds="+endSeconds);
@@ -305,12 +308,37 @@ public class NetworkAPI {
             headers.put("content-type", List.of("application/json"));
             Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
             LOG.info("response code = " + response.getStatusCode());
-            return response.body().string();
+            statusCode = response.getStatusCode();
+            if (statusCode < 300) {
+                return response.body().string();
+            }
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
             return null;
         } 
+        throw new NonSuccessfulResponseCodeException(statusCode);
     }
+
+    public static String getArchive(ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+        Response response = null;
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/archives");
+
+            Map<String, List<String>> headers = new HashMap<>();
+            headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
+            headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
+            headers.put("content-type", List.of("application/json"));
+            response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+        } catch (URISyntaxException | IOException ex) {
+            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        LOG.info("response code = " + response.getStatusCode());
+        if (response.getStatusCode() != 200) {
+            throw new NonSuccessfulResponseCodeException(response.getStatusCode());
+        }
+        return response.body().string();
+    }
+
     private static String getAuthorizationHeader(CredentialsProvider credentialsProvider) {
         try {
             String identifier = credentialsProvider.getAci() != null ? credentialsProvider.getAci().toString() : credentialsProvider.getE164();
