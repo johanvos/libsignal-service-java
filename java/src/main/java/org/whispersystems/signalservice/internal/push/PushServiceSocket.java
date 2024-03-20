@@ -159,6 +159,7 @@ import org.whispersystems.signalservice.api.storage.StorageKey;
 import org.whispersystems.signalservice.internal.push.exceptions.PaymentsRegionException;
 import org.whispersystems.signalservice.internal.push.http.AcceptLanguagesUtil;
 import org.signal.libsignal.grpc.GrpcClient;
+import org.whispersystems.signalservice.api.archive.ArchiveMessageBackupUploadFormResponse;
 
 /**
  * @author Moxie Marlinspike
@@ -1326,6 +1327,68 @@ public class PushServiceSocket {
 //            }
 //        }
     }
+  public String getResumableUploadUrl(ArchiveMessageBackupUploadFormResponse uploadFormResponse) throws IOException {
+    return getResumableUploadUrl(uploadFormResponse.getCdn(), uploadFormResponse.getSignedUploadLocation(), uploadFormResponse.getHeaders()); 
+  }
+  
+  private String getResumableUploadUrl(int cdn, String signedUrl, Map<String, String> headers) throws IOException {
+    ConnectionHolder connectionHolder = getRandom(cdnClientsMap.get(cdn), random);
+    throw new UnsupportedOperationException();
+//            NetworkClient client = buildNetworkClient(unidentifiedAccessKey.isPresent());
+//
+//    
+//    OkHttpClient     okHttpClient     = connectionHolder.getClient()
+//                                                        .newBuilder()
+//                                                        .connectTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
+//                                                        .readTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
+//                                                        .build();
+//
+//    Request.Builder request = new Request.Builder().url(buildConfiguredUrl(connectionHolder, signedUrl))
+//                                                   .post(RequestBody.create(null, ""));
+//
+//    for (Map.Entry<String, String> header : headers.entrySet()) {
+//      if (!header.getKey().equalsIgnoreCase("host")) {
+//        request.header(header.getKey(), header.getValue());
+//      }
+//    }
+//
+//    if (connectionHolder.getHostHeader().isPresent()) {
+//      request.header("host", connectionHolder.getHostHeader().get());
+//    }
+//
+//    request.addHeader("Content-Length", "0");
+//
+//    if (cdn == 2) {
+//      request.addHeader("Content-Type", "application/octet-stream");
+//    } else if (cdn == 3) {
+//      request.addHeader("Upload-Defer-Length", "1")
+//             .addHeader("Tus-Resumable", "1.0.0");
+//    } else {
+//      throw new AssertionError("Unknown CDN version: " + cdn);
+//    }
+//
+//    Call call = okHttpClient.newCall(request.build());
+//    synchronized (connections) {
+//      connections.add(call);
+//    }
+//
+//    try (Response response = call.execute()) {
+//      if (response.isSuccessful()) {
+//        return response.header("location");
+//      } else {
+//        throw new NonSuccessfulResponseCodeException(response.code(), "Response: " + response);
+//      }
+//    } catch (PushNetworkException | NonSuccessfulResponseCodeException e) {
+//      throw e;
+//    } catch (IOException e) {
+//      throw new PushNetworkException(e);
+//    } finally {
+//      synchronized (connections) {
+//        connections.remove(call);
+//      }
+//    }
+  }
+
 
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody)
             throws NonSuccessfulResponseCodeException, IOException, MalformedResponseException {

@@ -19,6 +19,7 @@ module org.whispersystems.service {
     exports org.whispersystems.signalservice.internal.webrtc;
     exports org.whispersystems.signalservice.internal.websocket;
     exports org.whispersystems.signalservice.api;
+    exports org.whispersystems.signalservice.api.archive;
     exports org.whispersystems.signalservice.api.backup;
     exports org.whispersystems.signalservice.api.crypto;
     exports org.whispersystems.signalservice.api.groupsv2;
@@ -34,6 +35,7 @@ module org.whispersystems.service {
     exports org.whispersystems.signalservice.api.websocket;
     exports org.whispersystems.util;
     exports com.gluonhq.snl;
+    opens org.whispersystems.signalservice.api.archive to com.fasterxml.jackson.databind;
     opens org.whispersystems.signalservice.api.groupsv2 to com.fasterxml.jackson.databind;
     opens org.whispersystems.signalservice.internal.push to com.fasterxml.jackson.databind;
     opens org.whispersystems.signalservice.api.messages.calls to com.fasterxml.jackson.databind;
