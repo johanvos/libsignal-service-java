@@ -391,7 +391,26 @@ public class NetworkAPI {
             headers.put("content-type", List.of("application/json"));
             response = getClient().sendRequest(uri, "GET", new byte[0], headers);
         } catch (URISyntaxException | IOException ex) {
-            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
+            LOG.log(Level.SEVERE, null, ex);
+        }
+        LOG.info("response code = " + response.getStatusCode() + " and body = " + response.body().string());
+        if (response.getStatusCode() != 200) {
+            throw new NonSuccessfulResponseCodeException(response.getStatusCode());
+        }
+        return response.body().string();
+    }
+    
+    public static String getReadCredentials(ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+                  Response response = null;
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/archives/auth/read");
+            Map<String, List<String>> headers = new HashMap<>();
+            headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
+            headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
+            headers.put("content-type", List.of("application/json"));
+            response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+        } catch (URISyntaxException | IOException ex) {
+            LOG.log(Level.SEVERE, null, ex);
         }
         LOG.info("response code = " + response.getStatusCode() + " and body = " + response.body().string());
         if (response.getStatusCode() != 200) {
