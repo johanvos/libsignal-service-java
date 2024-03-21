@@ -1,5 +1,6 @@
 package com.gluonhq.snl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.privacyresearch.servermodel.CredentialsMessage;
 import io.privacyresearch.servermodel.CredentialsResponseMessage;
 import io.privacyresearch.servermodel.UserRemoteConfigListMessage;
@@ -36,6 +37,8 @@ import org.whispersystems.signalservice.internal.configuration.SignalUrl;
 import org.whispersystems.signalservice.internal.push.PreKeyEntity;
 import org.whispersystems.signalservice.internal.push.PreKeyResponse;
 import org.whispersystems.signalservice.internal.push.PreKeyResponseItem;
+import org.whispersystems.signalservice.internal.push.RemoteConfigResponse;
+import org.whispersystems.signalservice.internal.push.SenderCertificate;
 import org.whispersystems.util.Base64;
 
 /**
@@ -83,9 +86,15 @@ public class NetworkAPI {
             }
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
-            Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            NetworkClient client = getClient();
+            Response response = client.sendRequest(uri, "GET", new byte[0], headers);
             if (response.getStatusCode() == 401) {
                 throw new AuthorizationFailedException(response.getStatusCode(), "Got a 401 code from server when asking sendercertifcate");
+            }
+            if (client.supportsJson()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                SenderCertificate cert = objectMapper.readValue(response.body().string(), SenderCertificate.class);
+                return cert.getCertificate();
             }
             byte[] raw = response.body().bytes();
             return raw;
@@ -101,8 +110,18 @@ public class NetworkAPI {
             URI uri = new URI("xhttps://"+HOST+"/v1/config");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
-            Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            NetworkClient client = getClient();
+            Response response = client.sendRequest(uri, "GET", new byte[0], headers);
             checkResponseStatus(response.getStatusCode());
+            if (client.supportsJson()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                RemoteConfigResponse remoteConf = objectMapper.readValue(response.body().string(), RemoteConfigResponse.class);
+                List<RemoteConfigResponse.Config> configs = remoteConf.getConfig();
+                for (RemoteConfigResponse.Config config : configs) {
+                    answer.put(config.getName(), config.getValue());
+                }
+                return answer;
+            }
             byte[] raw = response.body().bytes();
             UserRemoteConfigListMessage urlm = UserRemoteConfigListMessage.parseFrom(raw);
             for (UserRemoteConfigMessage urcm : urlm.getUserRemoteConfigList()) {

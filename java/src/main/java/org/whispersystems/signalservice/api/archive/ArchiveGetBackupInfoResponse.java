@@ -9,13 +9,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ArchiveGetBackupInfoResponse {
 
     @JsonProperty
-    int cdn;
+    public int cdn;
 
     @JsonProperty
-    String backupDir;
+    public String backupDir;
 
     @JsonProperty
-    String backupName;
+    public String backupName;
 
     @JsonProperty
     long usedSpace;

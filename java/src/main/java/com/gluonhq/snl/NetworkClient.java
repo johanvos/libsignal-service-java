@@ -137,6 +137,12 @@ public abstract class NetworkClient {
         this.formatProcessingThread.start();
     }
 
+    // by default, we don't support json. We assume there is no json in the protocol,
+    // or a proxy has removed it already.
+    public boolean supportsJson() {
+        return false;
+    }
+
     private void createWebSocket() throws IOException {
         LOG.info("Creating websocket, using credentialsprovider? "+this.credentialsProvider.isPresent());
         String baseUrl = signalUrl.getUrl().replace("https://", "wss://")
