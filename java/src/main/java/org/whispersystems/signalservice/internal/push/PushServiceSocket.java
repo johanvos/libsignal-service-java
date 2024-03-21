@@ -1130,6 +1130,12 @@ public class PushServiceSocket {
 
     public void downloadFromCdn(OutputStream outputStream, long offset, int cdnNumber, String path, long maxSizeBytes, ProgressListener listener)
             throws PushNetworkException, NonSuccessfulResponseCodeException, MissingConfigurationException {
+        downloadFromCdn(outputStream, offset, cdnNumber, path, maxSizeBytes, listener, Map.of());
+    }
+
+    public void downloadFromCdn(OutputStream outputStream, long offset, int cdnNumber,
+            String path, long maxSizeBytes, ProgressListener listener, Map<String, String> headers)
+            throws PushNetworkException, NonSuccessfulResponseCodeException, MissingConfigurationException {
         LOG.info("need "+path+" for download from CDN");
         ConnectionHolder[] cdnNumberClients = cdnClientsMap.get(cdnNumber);
         if (cdnNumberClients == null) {
@@ -1150,7 +1156,11 @@ public class PushServiceSocket {
         if (connectionHolder.getHostHeader().isPresent()) {
             builder.header("Host", connectionHolder.getHostHeader().get());
         }
-
+        if (headers!= null) {
+            headers.entrySet().forEach(entry ->
+                    builder.setHeader(entry.getKey(), entry.getValue())
+            );
+        }
         if (offset > 0) {
             Log.i(TAG, "Starting download from CDN with offset " + offset);
             builder.header("Range", "bytes=" + offset + "-");
