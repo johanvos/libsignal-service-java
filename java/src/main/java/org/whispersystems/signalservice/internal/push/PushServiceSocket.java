@@ -1167,7 +1167,7 @@ public class PushServiceSocket {
         }
         try {
             HttpRequest request = builder.build();
-            LOG.info("Get from CDN: "+request.uri()+" and headers = "+request.headers());
+            LOG.finest("Get from CDN: "+request.uri()+" and headers = "+request.headers());
             Response response = client.sendRequest(request, new byte[0]);
 
             if (response.isSuccessful()) {
@@ -1287,12 +1287,11 @@ public class PushServiceSocket {
     private AttachmentDigest uploadToCdn2(String resumableUrl, InputStream data, String contentType, long length, OutputStreamFactory outputStreamFactory, ProgressListener progressListener, CancelationSignal cancelationSignal) throws IOException {
         throw new UnsupportedOperationException();
 //        ConnectionHolder connectionHolder = getRandom(cdnClientsMap.get(2), random);
-//        NetworkClient client = connectionHolder.getClient();
-////        OkHttpClient okHttpClient = connectionHolder.getClient()
-////                .newBuilder()
-////                .connectTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-////                .readTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-////                .build();
+//        OkHttpClient okHttpClient = connectionHolder.getClient()
+//                .newBuilder()
+//                .connectTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
+//                .readTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
+//                .build();
 //
 //        ResumeInfo resumeInfo = getResumeInfo(resumableUrl, length);
 //        DigestingRequestBody file = new DigestingRequestBody(data, outputStreamFactory, contentType, length, false, progressListener, cancelationSignal, resumeInfo.contentStart);
@@ -1392,7 +1391,6 @@ public class PushServiceSocket {
             Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
             throw new PushNetworkException(ex);
         }
-
     }
 
     private ResumeInfo getResumeInfoCdn3(String resumableUrl, Map<String, String> headers) throws IOException {
@@ -1481,7 +1479,7 @@ public class PushServiceSocket {
         URI answer = new URI(endpointUri.getScheme(), endpointUri.getUserInfo(),
                 endpointUri.getHost(), endpointUri.getPort(), combinedPath,
                 resumableUri.getQuery(), resumableUri.getFragment());
-        LOG.info("ConfiguredUrl = "+answer);
+        LOG.finest("ConfiguredUrl = "+answer);
         return answer;
 }
     private String makeServiceRequestWithoutAuthentication(String urlFragment, String method, String jsonBody)

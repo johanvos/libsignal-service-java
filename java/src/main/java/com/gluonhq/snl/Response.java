@@ -27,7 +27,6 @@ public class Response<T> {
         this.statusCode = httpAnswer.statusCode();
         HttpHeaders headers = httpAnswer.headers();
         headers.map().keySet().stream().forEach(key -> headers.firstValue(key).ifPresent(val -> responseHeaders.put(key.toLowerCase(), val)));
-        System.err.println("headers = "+responseHeaders);
     }
 
     public ResponseBody<T> body() {

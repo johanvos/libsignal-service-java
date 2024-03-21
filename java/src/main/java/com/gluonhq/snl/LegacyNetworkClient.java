@@ -121,18 +121,9 @@ public class LegacyNetworkClient extends NetworkClient {
     private Response getDirectResponse(HttpRequest request) throws IOException {
         HttpResponse httpResponse;
         try {
-            LOG.info("Invoke send on httpClient " + this.httpClient+" with method "+request.method()+" and uri = "+request.uri()+" and headers = "+request.headers());
+            LOG.info("Invoke send on httpClient " + this.httpClient);
             httpResponse = this.httpClient.send(request, createBodyHandler(request));
             LOG.info("Did invoke send on httpClient");
-            LOG.info("Responsebody = " + (httpResponse.body() == null ? "NULL" : httpResponse.body().toString()));
-            Object body = httpResponse.body();
-            if (body != null) {
-                LOG.info("bodyclass = "+body.getClass());
-                if (body instanceof byte[] br) {
-                    LOG.info("Bytes = "+Arrays.toString(br));
-                    LOG.info("As string: "+new String(br));
-                }
-            }
         } catch (InterruptedException ex) {
             LOG.log(Level.SEVERE, "Error sending using httpClient " + this.httpClient, ex);
             throw new IOException(ex);

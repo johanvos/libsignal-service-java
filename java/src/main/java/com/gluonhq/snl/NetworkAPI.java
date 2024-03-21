@@ -393,7 +393,6 @@ public class NetworkAPI {
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
         }
-        LOG.info("response code = " + response.getStatusCode() + " and body = " + response.body().string());
         if (response.getStatusCode() != 200) {
             throw new NonSuccessfulResponseCodeException(response.getStatusCode());
         }
