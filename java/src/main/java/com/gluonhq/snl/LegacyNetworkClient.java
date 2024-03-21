@@ -122,7 +122,7 @@ public class LegacyNetworkClient extends NetworkClient {
         HttpResponse httpResponse;
         try {
             LOG.info("Invoke send on httpClient " + this.httpClient+" with method "+request.method()+" and uri = "+request.uri()+" and headers = "+request.headers());
-            httpResponse = this.httpClient.send(request, createBodyHandler());
+            httpResponse = this.httpClient.send(request, createBodyHandler(request));
             LOG.info("Did invoke send on httpClient");
             LOG.info("Responsebody = " + (httpResponse.body() == null ? "NULL" : httpResponse.body().toString()));
             Object body = httpResponse.body();

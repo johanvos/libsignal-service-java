@@ -449,7 +449,7 @@ public abstract class NetworkClient {
         }
     }
 
-    HttpResponse.BodyHandler createBodyHandler() {
+    HttpResponse.BodyHandler createBodyHandler(final HttpRequest request) {
         HttpResponse.BodyHandler mbh = new HttpResponse.BodyHandler() {
             @Override
             public HttpResponse.BodySubscriber apply(HttpResponse.ResponseInfo responseInfo) {
@@ -458,7 +458,7 @@ public abstract class NetworkClient {
                 if (responseInfo.statusCode() == 428) {
                     LOG.info("Got 428 response! all headers = " + responseInfo.headers().map());
                 }
-                if (ct.isBlank()) {
+                if (ct.isBlank() && !(request.uri().getHost().contains("cdn"))) {
                     return BodySubscribers.discarding();
                 }
                 if ((ct.equals("application/json") || (ct.equals("application/xml")))) {
