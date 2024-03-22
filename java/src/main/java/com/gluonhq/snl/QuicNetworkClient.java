@@ -41,6 +41,7 @@ public class QuicNetworkClient extends NetworkClient {
     // "swave://grpcproxy.gluonhq.net:7443";
     private QuicClientTransport.ControlledQuicStream kwikStream;
     private final ExecutorService directExecutorService = Executors.newFixedThreadPool(1);
+    LegacyNetworkClient fallback;
 
 
     public QuicNetworkClient(SignalUrl url, String agent, boolean allowStories) {
@@ -49,6 +50,7 @@ public class QuicNetworkClient extends NetworkClient {
 
     public QuicNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String signalAgent, Optional<ConnectivityListener> connectivityListener, boolean allowStories) {
         super(url, cp, signalAgent, connectivityListener, allowStories);
+        this.fallback = new LegacyNetworkClient(url, cp, signalAgent, connectivityListener, allowStories);
         URI uri = null;
         this.kwikAddress = System.getProperty("wave.kwikhost", "swave://grpcproxy.gluonhq.net:7444");
 
@@ -85,16 +87,21 @@ public class QuicNetworkClient extends NetworkClient {
 
     @Override
     protected CompletableFuture<Response> implAsyncSendRequest(URI uri, String method, byte[] body, Map<String, List<String>> headers) throws IOException {
+        if ( uri.getHost().contains("cdn3") ){
+            LOG.info("FALLBACK to non-quic until we support response headers");
+            return fallback.implAsyncSendRequest(uri, method, body, headers);
+        }
         SignalRpcMessage.Builder requestBuilder = SignalRpcMessage.newBuilder();
         requestBuilder.setUrlfragment(uri.toString());
-        requestBuilder.setBody(ByteString.copyFrom(body));
+        requestBuilder.setBody(body == null ? ByteString.EMPTY : ByteString.copyFrom(body));
         headers.entrySet().forEach(header -> {
             header.getValue().forEach(hdr -> {
                 requestBuilder.addHeader(header.getKey() + "=" + hdr);
             });
         });
         requestBuilder.setMethod(method);
-        LOG.info("Getting ready to send DM to kwikproxy with uri = " + uri+", method = " + method + ", body length = "+body.length+" and hl = "+headers.size());
+        int bodyLength = body == null ? -1 : body.length;
+        LOG.info("Getting ready to send DM to kwikproxy with uri = " + uri+", method = " + method + ", body length = "+bodyLength+" and hl = "+headers.size());
         CompletableFuture<SignalRpcReply> sReplyFuture = sendSignalMessage(requestBuilder.build());
         CompletableFuture<Response> answer = sReplyFuture.thenApply(reply -> new Response<byte[]>(reply.getMessage().toByteArray(), reply.getStatuscode()));
         return answer;
