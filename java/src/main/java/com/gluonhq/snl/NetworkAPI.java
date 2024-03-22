@@ -300,8 +300,9 @@ public class NetworkAPI {
     }
 
     // === BACKUP ===
-    public static String enableBackup(String context) {
+    public static boolean enableBackup(String context) throws NonSuccessfulResponseCodeException {
         LOG.info("Enabling backup...");
+        int statusCode = 0;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives/backupid");
             Map<String, List<String>> headers = new HashMap<>();
@@ -309,12 +310,16 @@ public class NetworkAPI {
             headers.put("content-type", List.of("application/json"));
             String body = "{\"backupAuthCredentialRequest\":\"" + context + "\"\n}";
             Response response = getClient().sendRequest(uri, "PUT", body.getBytes(), headers);
+            statusCode = response.getStatusCode();
             LOG.info("response code = " + response.getStatusCode());
-            return response.body().string();
+            if (statusCode == 204) {
+                return true;
+            }
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
-            return null;
+            return false;
         }
+        throw new NonSuccessfulResponseCodeException(statusCode);
     }
 
     public static String getBackupAuthCredentials(long startSeconds, long endSeconds) throws NonSuccessfulResponseCodeException {
