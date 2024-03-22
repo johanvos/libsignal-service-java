@@ -359,7 +359,14 @@ public class NetworkAPI {
         return response.body().string();
     }
 
-    public static String setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+    /**
+     * Send the public key belonging to the requester. 
+     * @param publicKey
+     * @param credentialPresentation
+     * @return true if this worked without issues, false if there were non-server issues
+     * @throws NonSuccessfulResponseCodeException in case the server rejected our call (no 204 response)
+     */
+    public static boolean setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives/keys");
@@ -372,13 +379,14 @@ public class NetworkAPI {
             headers.put("content-type", List.of("application/json"));
             response = getClient().sendRequest(uri, "PUT", body.getBytes(), headers);
         } catch (URISyntaxException | IOException ex) {
-            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
+            LOG.log(Level.SEVERE, null, ex);
+            return false;
         }
-        LOG.info("response code = " + response.getStatusCode() + " and body = " + response.body().string());
-        if (response.getStatusCode() != 200) {
+        LOG.info("response code = " + response.getStatusCode());
+        if (response.getStatusCode() != 204) {
             throw new NonSuccessfulResponseCodeException(response.getStatusCode());
         }
-        return response.body().string();
+        return true;
     }
 
     public static String getArchiveMessageBackupUploadForm(ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
