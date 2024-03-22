@@ -1,5 +1,6 @@
 package com.gluonhq.snl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.privacyresearch.servermodel.CredentialsMessage;
 import io.privacyresearch.servermodel.CredentialsResponseMessage;
 import io.privacyresearch.servermodel.UserRemoteConfigListMessage;
@@ -36,6 +37,8 @@ import org.whispersystems.signalservice.internal.configuration.SignalUrl;
 import org.whispersystems.signalservice.internal.push.PreKeyEntity;
 import org.whispersystems.signalservice.internal.push.PreKeyResponse;
 import org.whispersystems.signalservice.internal.push.PreKeyResponseItem;
+import org.whispersystems.signalservice.internal.push.RemoteConfigResponse;
+import org.whispersystems.signalservice.internal.push.SenderCertificate;
 import org.whispersystems.util.Base64;
 
 /**
@@ -83,9 +86,15 @@ public class NetworkAPI {
             }
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
-            Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            NetworkClient client = getClient();
+            Response response = client.sendRequest(uri, "GET", new byte[0], headers);
             if (response.getStatusCode() == 401) {
                 throw new AuthorizationFailedException(response.getStatusCode(), "Got a 401 code from server when asking sendercertifcate");
+            }
+            if (client.supportsJson()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                SenderCertificate cert = objectMapper.readValue(response.body().string(), SenderCertificate.class);
+                return cert.getCertificate();
             }
             byte[] raw = response.body().bytes();
             return raw;
@@ -101,8 +110,18 @@ public class NetworkAPI {
             URI uri = new URI("xhttps://"+HOST+"/v1/config");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
-            Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            NetworkClient client = getClient();
+            Response response = client.sendRequest(uri, "GET", new byte[0], headers);
             checkResponseStatus(response.getStatusCode());
+            if (client.supportsJson()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                RemoteConfigResponse remoteConf = objectMapper.readValue(response.body().string(), RemoteConfigResponse.class);
+                List<RemoteConfigResponse.Config> configs = remoteConf.getConfig();
+                for (RemoteConfigResponse.Config config : configs) {
+                    answer.put(config.getName(), config.getValue());
+                }
+                return answer;
+            }
             byte[] raw = response.body().bytes();
             UserRemoteConfigListMessage urlm = UserRemoteConfigListMessage.parseFrom(raw);
             for (UserRemoteConfigMessage urcm : urlm.getUserRemoteConfigList()) {
@@ -340,7 +359,14 @@ public class NetworkAPI {
         return response.body().string();
     }
 
-    public static String setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+    /**
+     * Send the public key belonging to the requester. 
+     * @param publicKey
+     * @param credentialPresentation
+     * @return true if this worked without issues, false if there were non-server issues
+     * @throws NonSuccessfulResponseCodeException in case the server rejected our call (no 204 response)
+     */
+    public static boolean setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives/keys");
@@ -353,13 +379,14 @@ public class NetworkAPI {
             headers.put("content-type", List.of("application/json"));
             response = getClient().sendRequest(uri, "PUT", body.getBytes(), headers);
         } catch (URISyntaxException | IOException ex) {
-            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
+            LOG.log(Level.SEVERE, null, ex);
+            return false;
         }
-        LOG.info("response code = " + response.getStatusCode() + " and body = " + response.body().string());
-        if (response.getStatusCode() != 200) {
+        LOG.info("response code = " + response.getStatusCode());
+        if (response.getStatusCode() != 204) {
             throw new NonSuccessfulResponseCodeException(response.getStatusCode());
         }
-        return response.body().string();
+        return true;
     }
 
     public static String getArchiveMessageBackupUploadForm(ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
@@ -372,7 +399,25 @@ public class NetworkAPI {
             headers.put("content-type", List.of("application/json"));
             response = getClient().sendRequest(uri, "GET", new byte[0], headers);
         } catch (URISyntaxException | IOException ex) {
-            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
+            LOG.log(Level.SEVERE, null, ex);
+        }
+        if (response.getStatusCode() != 200) {
+            throw new NonSuccessfulResponseCodeException(response.getStatusCode());
+        }
+        return response.body().string();
+    }
+    
+    public static String getReadCredentials(ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+                  Response response = null;
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/archives/auth/read");
+            Map<String, List<String>> headers = new HashMap<>();
+            headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
+            headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
+            headers.put("content-type", List.of("application/json"));
+            response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+        } catch (URISyntaxException | IOException ex) {
+            LOG.log(Level.SEVERE, null, ex);
         }
         LOG.info("response code = " + response.getStatusCode() + " and body = " + response.body().string());
         if (response.getStatusCode() != 200) {

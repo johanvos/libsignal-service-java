@@ -137,6 +137,12 @@ public abstract class NetworkClient {
         this.formatProcessingThread.start();
     }
 
+    // by default, we don't support json. We assume there is no json in the protocol,
+    // or a proxy has removed it already.
+    public boolean supportsJson() {
+        return false;
+    }
+
     private void createWebSocket() throws IOException {
         LOG.info("Creating websocket, using credentialsprovider? "+this.credentialsProvider.isPresent());
         String baseUrl = signalUrl.getUrl().replace("https://", "wss://")
@@ -443,7 +449,7 @@ public abstract class NetworkClient {
         }
     }
 
-    HttpResponse.BodyHandler createBodyHandler() {
+    HttpResponse.BodyHandler createBodyHandler(final HttpRequest request) {
         HttpResponse.BodyHandler mbh = new HttpResponse.BodyHandler() {
             @Override
             public HttpResponse.BodySubscriber apply(HttpResponse.ResponseInfo responseInfo) {
@@ -452,7 +458,7 @@ public abstract class NetworkClient {
                 if (responseInfo.statusCode() == 428) {
                     LOG.info("Got 428 response! all headers = " + responseInfo.headers().map());
                 }
-                if (ct.isBlank()) {
+                if (ct.isBlank() && !(request.uri().getHost().contains("cdn"))) {
                     return BodySubscribers.discarding();
                 }
                 if ((ct.equals("application/json") || (ct.equals("application/xml")))) {

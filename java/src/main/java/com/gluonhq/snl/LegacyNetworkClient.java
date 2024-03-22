@@ -46,6 +46,11 @@ public class LegacyNetworkClient extends NetworkClient {
         this.httpClient = buildClient();
     }
 
+    @Override
+    public boolean supportsJson() {
+        return true;
+    }
+
     private HttpClient buildClient() {
         HttpClient.Builder clientBuilder = HttpClient.newBuilder();
         HttpClient answer = clientBuilder.build();
@@ -117,7 +122,7 @@ public class LegacyNetworkClient extends NetworkClient {
         HttpResponse httpResponse;
         try {
             LOG.info("Invoke send on httpClient " + this.httpClient);
-            httpResponse = this.httpClient.send(request, createBodyHandler());
+            httpResponse = this.httpClient.send(request, createBodyHandler(request));
             LOG.info("Did invoke send on httpClient");
         } catch (InterruptedException ex) {
             LOG.log(Level.SEVERE, "Error sending using httpClient " + this.httpClient, ex);

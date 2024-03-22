@@ -1,7 +1,10 @@
 package com.gluonhq.snl;
 
+import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -12,14 +15,18 @@ public class Response<T> {
   //  private HttpResponse<T> httpAnswer;
     private final int statusCode;
     T body;
+    Map<String, String> responseHeaders = new HashMap<>();
 
     public Response(byte[] rawBytes, int statusCode) {
         this.body = (T)rawBytes;
         this.statusCode = statusCode;
     }
+
     public Response(HttpResponse<T> httpAnswer) {
         this.body = httpAnswer.body();
         this.statusCode = httpAnswer.statusCode();
+        HttpHeaders headers = httpAnswer.headers();
+        headers.map().keySet().stream().forEach(key -> headers.firstValue(key).ifPresent(val -> responseHeaders.put(key.toLowerCase(), val)));
     }
 
     public ResponseBody<T> body() {
@@ -31,9 +38,9 @@ public class Response<T> {
     }
 
     public String header(String key) {
-                throw new UnsupportedOperationException("Not supported yet.");
-
+        return responseHeaders.get(key.toLowerCase());        
     }
+
     public boolean isSuccessful() {
         return ((statusCode >= 200) && (statusCode < 300));
     }
