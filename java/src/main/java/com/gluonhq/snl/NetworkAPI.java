@@ -344,16 +344,11 @@ public class NetworkAPI {
         throw new NonSuccessfulResponseCodeException(statusCode);
     }
 
-    public static String getArchive(ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+    public static String getArchive(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives");
-
-            Map<String, List<String>> headers = new HashMap<>();
-            headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
-            headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
-            headers.put("content-type", List.of("application/json"));
-            response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -371,18 +366,14 @@ public class NetworkAPI {
      * @return true if this worked without issues, false if there were non-server issues
      * @throws NonSuccessfulResponseCodeException in case the server rejected our call (no 204 response)
      */
-    public static boolean setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+    public static boolean setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives/keys");
             String key = Base64.encodeBytes(publicKey.serialize());
             String body = "{\"backupIdPublicKey\": \"" + key + "\"}";
             LOG.info("SEND BODY: " + body);
-            Map<String, List<String>> headers = new HashMap<>();
-            headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
-            headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
-            headers.put("content-type", List.of("application/json"));
-            response = getClient().sendRequest(uri, "PUT", body.getBytes(), headers);
+            response = getClient().sendRequest(uri, "PUT", body.getBytes(), createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
             return false;
@@ -394,15 +385,11 @@ public class NetworkAPI {
         return true;
     }
 
-    public static String getArchiveMessageBackupUploadForm(ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
+    public static String getArchiveMessageBackupUploadForm(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
           Response response = null;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives/upload/form");
-            Map<String, List<String>> headers = new HashMap<>();
-            headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
-            headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
-            headers.put("content-type", List.of("application/json"));
-            response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
         }
@@ -412,15 +399,11 @@ public class NetworkAPI {
         return response.body().string();
     }
     
-    public static String getReadCredentials(ArchiveCredentialPresentation credentialPresentation) throws NonSuccessfulResponseCodeException {
-                  Response response = null;
+    public static String getReadCredentials(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
+        Response response = null;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives/auth/read");
-            Map<String, List<String>> headers = new HashMap<>();
-            headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
-            headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
-            headers.put("content-type", List.of("application/json"));
-            response = getClient().sendRequest(uri, "GET", new byte[0], headers);
+            response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
         }
@@ -430,6 +413,15 @@ public class NetworkAPI {
         }
         return response.body().string();
     }
+
+    private static Map<String, List<String>> createZKHeaders(ArchiveCredentialPresentation credentialPresentation) {
+        Map<String, List<String>> headers = new HashMap<>();
+        headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
+        headers.put("X-Signal-ZK-Auth-Signature", List.of(Base64.encodeBytes(credentialPresentation.signedPresentation())));
+        headers.put("content-type", List.of("application/json"));
+        return headers;
+    }
+
     // === END BACKUP ===
 
     private static String getAuthorizationHeader(CredentialsProvider credentialsProvider) {
