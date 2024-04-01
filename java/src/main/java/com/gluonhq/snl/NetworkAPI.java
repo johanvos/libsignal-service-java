@@ -25,7 +25,8 @@ import org.signal.libsignal.protocol.IdentityKey;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ecc.ECPublicKey;
 import org.signal.libsignal.usernames.Username;
-import org.whispersystems.signalservice.api.ArchiveCredentialPresentation;
+import org.whispersystems.signalservice.api.archive.ArchiveCredentialPresentation;
+import org.whispersystems.signalservice.api.archive.CopyMediaRequest;
 import org.whispersystems.signalservice.api.groupsv2.CredentialResponse;
 import org.whispersystems.signalservice.api.groupsv2.TemporalCredential;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -39,6 +40,7 @@ import org.whispersystems.signalservice.internal.push.PreKeyResponse;
 import org.whispersystems.signalservice.internal.push.PreKeyResponseItem;
 import org.whispersystems.signalservice.internal.push.RemoteConfigResponse;
 import org.whispersystems.signalservice.internal.push.SenderCertificate;
+import org.whispersystems.signalservice.internal.util.JsonUtil;
 import org.whispersystems.util.Base64;
 
 /**
@@ -386,7 +388,7 @@ public class NetworkAPI {
     }
 
     public static String getArchiveMessageBackupUploadForm(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
-          Response response = null;
+        Response response = null;
         try {
             URI uri = new URI("https://" + HOST + "/v1/archives/upload/form");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
@@ -417,13 +419,32 @@ public class NetworkAPI {
     public static String listMedia(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/auth/read");
+            URI uri = new URI("https://" + HOST + "/v1/archives/media");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException| IOException  ex) {
             LOG.log(Level.SEVERE, null, ex);
             throw new IllegalArgumentException(ex);
         }
         if (response.getStatusCode() != 200) {
+            throw new NonSuccessfulResponseCodeException(response.getStatusCode());
+        }
+        return response.body().string();
+    }
+
+    public static String copyAttachmentMedia(ArchiveCredentialPresentation credentials, CopyMediaRequest copyMediaRequest) throws NonSuccessfulResponseCodeException {
+        Response response = null;
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/archives/media");
+            ObjectMapper mapper = new ObjectMapper();
+            String payload = mapper.writeValueAsString(copyMediaRequest);
+            LOG.info("request to copy/archive attachment with payload "+payload);
+            response = getClient().sendRequest(uri, "PUT", payload.getBytes(), createZKHeaders(credentials));
+        } catch (URISyntaxException | IOException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+        }
+        if (response.getStatusCode() != 200) {
+            LOG.info("Statuscode = "+response.getStatusCode());
+            LOG.info("body = "+response.body().string());
             throw new NonSuccessfulResponseCodeException(response.getStatusCode());
         }
         return response.body().string();

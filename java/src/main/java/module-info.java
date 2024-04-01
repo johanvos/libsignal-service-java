@@ -11,6 +11,7 @@ module org.whispersystems.service {
     exports org.signal.storageservice.protos.groups;
     exports org.signal.storageservice.protos.groups.local;
     exports org.whispersystems.signalservice.internal.configuration;
+    exports org.whispersystems.signalservice.internal.crypto;
     exports org.whispersystems.signalservice.internal.push;
     exports org.whispersystems.signalservice.internal.push.exceptions;
     exports org.whispersystems.signalservice.internal.storage.protos;

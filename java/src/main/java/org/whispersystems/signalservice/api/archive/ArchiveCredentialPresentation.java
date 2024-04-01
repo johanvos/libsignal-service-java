@@ -1,4 +1,4 @@
-package org.whispersystems.signalservice.api;
+package org.whispersystems.signalservice.api.archive;
 
 /**
  *
