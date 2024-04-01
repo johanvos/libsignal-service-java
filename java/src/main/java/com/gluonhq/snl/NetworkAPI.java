@@ -414,6 +414,21 @@ public class NetworkAPI {
         return response.body().string();
     }
 
+    public static String listMedia(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
+        Response response = null;
+        try {
+            URI uri = new URI("https://" + HOST + "/v1/archives/auth/read");
+            response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
+        } catch (URISyntaxException| IOException  ex) {
+            LOG.log(Level.SEVERE, null, ex);
+            throw new IllegalArgumentException(ex);
+        }
+        if (response.getStatusCode() != 200) {
+            throw new NonSuccessfulResponseCodeException(response.getStatusCode());
+        }
+        return response.body().string();
+    }
+
     private static Map<String, List<String>> createZKHeaders(ArchiveCredentialPresentation credentialPresentation) {
         Map<String, List<String>> headers = new HashMap<>();
         headers.put("X-Signal-ZK-Auth", List.of(Base64.encodeBytes(credentialPresentation.presentation())));
