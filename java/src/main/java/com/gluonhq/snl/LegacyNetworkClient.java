@@ -122,6 +122,7 @@ public class LegacyNetworkClient extends NetworkClient {
         HttpResponse httpResponse;
         try {
             LOG.info("Invoke send on httpClient " + this.httpClient);
+//            LOG.info("RequestBody = "+request.method()+" to "+request.bodyPublisher()+ " and headers = "+request.headers().map());
             httpResponse = this.httpClient.send(request, createBodyHandler(request));
             LOG.info("Did invoke send on httpClient");
         } catch (InterruptedException ex) {
@@ -172,6 +173,7 @@ public class LegacyNetworkClient extends NetworkClient {
             }
         }
         request.uri(uri);
+//        LOG.info("next, method = "+method+" and body = "+Arrays.toString(body));
         if (body == null) {
             request.method(method, BodyPublishers.noBody());
         } else {

@@ -12,6 +12,9 @@ public class ArchiveGetBackupInfoResponse {
     public int cdn;
 
     @JsonProperty
+    public String mediaDir;
+
+    @JsonProperty
     public String backupDir;
 
     @JsonProperty

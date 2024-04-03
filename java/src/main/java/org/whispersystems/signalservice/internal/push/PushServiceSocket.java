@@ -1359,7 +1359,8 @@ public class PushServiceSocket {
 
         ResumeInfo resumeInfo = getResumeInfoCdn3(resumableUrl, headers);
         DigestingRequestBody file = new DigestingRequestBody(data, outputStreamFactory, contentType, length, incremental, progressListener, cancelationSignal, resumeInfo.contentStart);
-
+        byte[] raw = file.getRawBytes();
+//        LOG.info("FILE = "+file+ " and length = "+file.contentLength()+" and bytes = "+Arrays.toString(file.getRawBytes()));
         if (resumeInfo.contentStart == length) {
             Log.w(TAG, "Resume start point == content length");
 //            try (NowhereBufferedSink buffer = new NowhereBufferedSink()) {
@@ -1372,7 +1373,7 @@ public class PushServiceSocket {
         String path = resumableUrl;
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(path))
-                .method("PATCH", BodyPublishers.ofByteArray(file.getRawBytes()))
+                .method("PATCH", BodyPublishers.ofByteArray(raw))
                 .header("Upload-Offset", String.valueOf(resumeInfo.contentStart))
                 .header("Upload-Length", String.valueOf(length))
                 .header("Tus-Resumable", "1.0.0");
@@ -1385,7 +1386,9 @@ public class PushServiceSocket {
         }
         HttpRequest request = requestBuilder.build();
         try {
-            Response sendRequest = client.sendRequest(request, file.getRawBytes());
+            Response sendRequest = client.sendRequest(request, raw);
+            LOG.info("Response from upload to cdn = "+sendRequest.getStatusCode());
+//            LOG.info("Response from upload to cdn = "+sendRequest.body().string());
             return file.getAttachmentDigest();
         } catch (IOException ex) {
             Logger.getLogger(PushServiceSocket.class.getName()).log(Level.SEVERE, null, ex);
