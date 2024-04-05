@@ -242,7 +242,13 @@ public class ServiceId {
         }
         
         public static PNI parseOrNull(byte[] raw) {
-            throw new UnsupportedOperationException("PNI PARSE");
+            if (raw == null) return null;
+            if (raw.length != 16) {
+                LOG.info("Can't parse a PNI from "+raw.length+" bytes. Return null as requested.");
+                return null;
+            }
+            UUID uuid = UuidUtil.parseOrNull(raw);
+            return new PNI(uuid);
         }
                 
         public org.signal.libsignal.protocol.ServiceId.Pni getLibSignalPni() {
