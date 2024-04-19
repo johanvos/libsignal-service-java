@@ -404,7 +404,7 @@ public class NetworkAPI {
     public static String getReadCredentials(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/auth/read");
+            URI uri = new URI("https://" + HOST + "/v1/archives/auth/read?cdn=3");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
