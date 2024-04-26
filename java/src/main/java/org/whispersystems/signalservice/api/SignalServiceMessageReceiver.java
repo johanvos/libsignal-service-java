@@ -62,6 +62,7 @@ public class SignalServiceMessageReceiver {
   private final SleepTimer                 sleepTimer;
   private final ClientZkProfileOperations  clientZkProfileOperations;
   private final boolean allowStories;
+  private final boolean useQuic;
 
   /**
    * Construct a SignalServiceMessageReceiver.
@@ -75,11 +76,13 @@ public class SignalServiceMessageReceiver {
                                       ConnectivityListener listener,
                                       SleepTimer timer,
                                       ClientZkProfileOperations clientZkProfileOperations,
-                                      boolean automaticNetworkRetry, boolean allowStories)
+                                      boolean automaticNetworkRetry, boolean allowStories,
+                                      boolean useQuic)
   {
     this.urls                      = urls;
     this.credentialsProvider       = credentials;
-    this.socket                    = new PushServiceSocket(urls, credentials, signalAgent, clientZkProfileOperations, automaticNetworkRetry);
+    this.useQuic = useQuic;
+    this.socket                    = new PushServiceSocket(urls, credentials, signalAgent, clientZkProfileOperations, automaticNetworkRetry, useQuic);
     this.signalAgent               = signalAgent;
     this.connectivityListener      = listener;
     this.sleepTimer                = timer;
@@ -186,7 +189,7 @@ public class SignalServiceMessageReceiver {
    * @return A SignalServiceMessagePipe for receiving Signal Service messages.
    */
     public NetworkClient createMessagePipe(Consumer callback) {
-        NetworkClient networkClient = NetworkClient.createNetworkClient(urls.getSignalServiceUrls()[0], Optional.of(credentialsProvider), signalAgent, Optional.of(connectivityListener), allowStories);
+        NetworkClient networkClient = NetworkClient.createNetworkClient(urls.getSignalServiceUrls()[0], Optional.of(credentialsProvider), signalAgent, Optional.of(connectivityListener), allowStories, useQuic);
         callback.accept(networkClient);
 //                                                            Optional.of(credentialsProvider), signalAgent,  )
 //    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
@@ -203,7 +206,7 @@ public class SignalServiceMessageReceiver {
     }
 
   public NetworkClient createUnidentifiedMessagePipe(Consumer callback) {
-              NetworkClient networkClient = NetworkClient.createNetworkClient(urls.getSignalServiceUrls()[0], Optional.empty(), signalAgent, Optional.of(connectivityListener), allowStories);
+              NetworkClient networkClient = NetworkClient.createNetworkClient(urls.getSignalServiceUrls()[0], Optional.empty(), signalAgent, Optional.of(connectivityListener), allowStories, useQuic);
         callback.accept(networkClient);
               return networkClient;
 

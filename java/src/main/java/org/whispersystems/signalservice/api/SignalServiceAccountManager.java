@@ -129,6 +129,7 @@ public class SignalServiceAccountManager {
   private final String                     userAgent;
   private final GroupsV2Operations         groupsV2Operations;
   private final SignalServiceConfiguration configuration;
+    private final NetworkAPI networkAPI;
 
 
   /**
@@ -148,30 +149,35 @@ public class SignalServiceAccountManager {
                                      String password,
                                      String signalAgent,
                                      boolean automaticNetworkRetry,
-                                     int maxGroupSize)
+                                     int maxGroupSize,
+                                     NetworkAPI networkAPI,
+                                     boolean useQuic)
   {
     this(configuration,
          new StaticCredentialsProvider(aci, pni, e164, deviceId, password),
          signalAgent,
          new GroupsV2Operations(ClientZkOperations.create(configuration), maxGroupSize),
-         automaticNetworkRetry);
+         automaticNetworkRetry, networkAPI, useQuic);
   }
 
   public SignalServiceAccountManager(SignalServiceConfiguration configuration,
                                      CredentialsProvider credentialsProvider,
                                      String signalAgent,
                                      GroupsV2Operations groupsV2Operations,
-                                     boolean automaticNetworkRetry)
+                                     boolean automaticNetworkRetry,
+                                     NetworkAPI networkAPI,
+                                     boolean useQuic)
   {
     this.groupsV2Operations = groupsV2Operations;
-    this.pushServiceSocket  = new PushServiceSocket(configuration, credentialsProvider, signalAgent, groupsV2Operations.getProfileOperations(), automaticNetworkRetry);
+    this.pushServiceSocket  = new PushServiceSocket(configuration, credentialsProvider, signalAgent, groupsV2Operations.getProfileOperations(), automaticNetworkRetry, useQuic);
     this.credentials        = credentialsProvider;
+    this.networkAPI = networkAPI;
     this.userAgent          = signalAgent;
     this.configuration      = configuration;
   }
 
   public byte[] getSenderCertificate() throws IOException {
-      return NetworkAPI.getSenderCertificate(credentials);
+      return networkAPI.getSenderCertificate(credentials);
   }
 
   public byte[] getSenderCertificateForPhoneNumberPrivacy() throws IOException {
@@ -726,8 +732,8 @@ public class SignalServiceAccountManager {
   }
 
     public Map<String, Object> getRemoteConfig() throws IOException {
-        return NetworkAPI.getRemoteConfig(credentials);
-//
+        return networkAPI.getRemoteConfig(credentials);
+
 //    RemoteConfigResponse response = this.pushServiceSocket.getRemoteConfig();
 //    Map<String, Object>  out      = new HashMap<>();
 //

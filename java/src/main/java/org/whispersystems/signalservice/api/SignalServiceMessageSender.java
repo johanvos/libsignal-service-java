@@ -187,8 +187,9 @@ public class SignalServiceMessageSender {
             ClientZkProfileOperations clientZkProfileOperations,
             ExecutorService executor,
             long maxEnvelopeSize,
-            boolean automaticNetworkRetry) {
-        this.socket = new PushServiceSocket(urls, credentialsProvider, signalAgent, clientZkProfileOperations, automaticNetworkRetry);
+            boolean automaticNetworkRetry,
+            boolean useQuic) {
+        this.socket = new PushServiceSocket(urls, credentialsProvider, signalAgent, clientZkProfileOperations, automaticNetworkRetry, useQuic);
         this.aciStore = store.aci();
         this.sessionLock = sessionLock;
         this.localAddress = new SignalServiceAddress(credentialsProvider.getAci(), credentialsProvider.getE164());

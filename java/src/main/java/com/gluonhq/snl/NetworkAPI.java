@@ -40,7 +40,6 @@ import org.whispersystems.signalservice.internal.push.PreKeyResponse;
 import org.whispersystems.signalservice.internal.push.PreKeyResponseItem;
 import org.whispersystems.signalservice.internal.push.RemoteConfigResponse;
 import org.whispersystems.signalservice.internal.push.SenderCertificate;
-import org.whispersystems.signalservice.internal.util.JsonUtil;
 import org.whispersystems.util.Base64;
 
 /**
@@ -49,25 +48,32 @@ import org.whispersystems.util.Base64;
  */
 public class NetworkAPI {
 
-    public static Optional<CredentialsProvider> cp;
-    public static SignalUrl signalUrl = null;
-    static String HOST = "chat.signal.org";
-    private static boolean local = false;
+    private Optional<CredentialsProvider> cp;
+    private final SignalUrl signalUrl = null;
+    private String host = "chat.signal.org";
+    private boolean local = false;
+    private boolean useQuic;
 
-    static private NetworkClient networkClient;
+    private NetworkClient networkClient;
     private static final Logger LOG = Logger.getLogger(NetworkAPI.class.getName());
-    static {
-        if ("true".equals(System.getProperty("wave.staging"))) {
-            HOST = "chat.staging.signal.org";
-        }
-        if ("true".equals(System.getProperty("wave.local"))) {
-            local = true;
-            HOST = "localhost:8079";
-        }
+
+    public NetworkAPI(Optional<CredentialsProvider> cp, boolean useQuic) {
+        this("chat.signal.org", cp, useQuic);
     }
-    private static NetworkClient getClient() {
+
+    public NetworkAPI(String host, Optional<CredentialsProvider> cp, boolean useQuic) {
+        LOG.info("Creating new NetworkAPI with host "+host);
+        this.host = host;
+        if (host.startsWith("localhost")) {
+            local = true;
+        }
+        this.cp = cp;
+        this.useQuic = useQuic;
+    }
+
+    private NetworkClient getClient() {
         if (networkClient == null) {
-            networkClient = NetworkClient.createNetworkClient(signalUrl, cp);
+            networkClient = NetworkClient.createNetworkClient(signalUrl, cp, useQuic);
         }
         return networkClient;
     }
@@ -80,11 +86,11 @@ public class NetworkAPI {
      * @return a byte array containing the certificate
      * @throws IOException
      */
-    public static byte[] getSenderCertificate(CredentialsProvider cred) throws IOException {
+    public byte[] getSenderCertificate(CredentialsProvider cred) throws IOException {
         try {
-            URI uri = new URI("xhttps://"+HOST+"/v1/certificate/delivery");
+            URI uri = new URI("xhttps://"+host+"/v1/certificate/delivery");
             if (local) {
-                uri = new URI("xhttp://"+HOST+"/v1/certificate/delivery");
+                uri = new URI("xhttp://"+host+"/v1/certificate/delivery");
             }
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
@@ -106,10 +112,10 @@ public class NetworkAPI {
         }
     }
 
-    public static Map<String, Object> getRemoteConfig(CredentialsProvider cred) throws IOException {
+    public Map<String, Object> getRemoteConfig(CredentialsProvider cred) throws IOException {
         try {
             Map<String, Object> answer = new HashMap<>();
-            URI uri = new URI("xhttps://"+HOST+"/v1/config");
+            URI uri = new URI("xhttps://"+host+"/v1/config");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
             NetworkClient client = getClient();
@@ -136,9 +142,9 @@ public class NetworkAPI {
         }
     }
 
-    public static String reserveUsername(List<Username> usernames) {
+    public String reserveUsername(List<Username> usernames) {
         try {
-            URI uri = new URI("https://" + HOST + "/v1/accounts/username_hash/reserve");
+            URI uri = new URI("https://" + host + "/v1/accounts/username_hash/reserve");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             headers.put("content-type", List.of("application/json"));
@@ -168,9 +174,9 @@ public class NetworkAPI {
      * @param link
      * @return the response body of the server message 
      */
-    public static String confirmUsername(String hash, String proof, String link) {
+    public String confirmUsername(String hash, String proof, String link) {
         try {
-            URI uri = new URI("https://" + HOST + "/v1/accounts/username_hash/confirm");
+            URI uri = new URI("https://" + host + "/v1/accounts/username_hash/confirm");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             headers.put("content-type", List.of("application/json"));
@@ -191,9 +197,9 @@ public class NetworkAPI {
      * @param hash
      * @return an ACI, or null if no such user is found.
      */
-    public static String getAciByUsernameHash(String hash) {
+    public String getAciByUsernameHash(String hash) {
         try {
-            URI uri = new URI("https://" + HOST + "/v1/accounts/username_hash/" + hash);
+            URI uri = new URI("https://" + host + "/v1/accounts/username_hash/" + hash);
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("content-type", List.of("application/json"));
 
@@ -214,9 +220,9 @@ public class NetworkAPI {
         }
     }
 
-    public static PreKeyResponse getPreKey(String uuid, int deviceId) throws IOException {
+    public PreKeyResponse getPreKey(String uuid, int deviceId) throws IOException {
         try {
-            URI uri = new URI("xhttps://"+HOST+"/v2/keys/" + uuid + "/" + deviceId);
+            URI uri = new URI("xhttps://"+host+"/v2/keys/" + uuid + "/" + deviceId);
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
@@ -255,11 +261,11 @@ public class NetworkAPI {
         }
     }
 
-    public static CredentialResponse retrieveGroupsV2Credentials(long todaySeconds)
+    public CredentialResponse retrieveGroupsV2Credentials(long todaySeconds)
             throws IOException {
         try {
             long todayPlus7 = todaySeconds + TimeUnit.DAYS.toSeconds(7);
-            URI uri = new URI("xhttps://"+HOST+"/v1/certificate/auth/group?redemptionStartSeconds=" + todaySeconds + "&redemptionEndSeconds=" + todayPlus7);
+            URI uri = new URI("xhttps://"+host+"/v1/certificate/auth/group?redemptionStartSeconds=" + todaySeconds + "&redemptionEndSeconds=" + todayPlus7);
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
@@ -291,9 +297,10 @@ public class NetworkAPI {
      * @param deviceId
      * @throws IOException
      */
-    public static void sendProvisionUrl(String url) throws IOException {
+    public void sendProvisionUrl(String url) throws IOException {
         try {
-            URI uri = new URI("http://"+HOST+"/v1/main/provisionurl/" + url);
+            URI uri = new URI("http://"+host+"/v1/main/provisionurl/" + url);
+            LOG.info("Send provisioning url with host " + host+" to "+url);
             Map<String, List<String>> headers = new HashMap<>();
             Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
         } catch (URISyntaxException ex) {
@@ -302,11 +309,11 @@ public class NetworkAPI {
     }
 
     // === BACKUP ===
-    public static boolean enableBackup(String context) throws NonSuccessfulResponseCodeException {
+    public boolean enableBackup(String context) throws NonSuccessfulResponseCodeException {
         LOG.info("Enabling backup...");
         int statusCode = 0;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/backupid");
+            URI uri = new URI("https://" + host + "/v1/archives/backupid");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             headers.put("content-type", List.of("application/json"));
@@ -324,10 +331,10 @@ public class NetworkAPI {
         throw new NonSuccessfulResponseCodeException(statusCode);
     }
 
-    public static String getBackupAuthCredentials(long startSeconds, long endSeconds) throws NonSuccessfulResponseCodeException {
+    public String getBackupAuthCredentials(long startSeconds, long endSeconds) throws NonSuccessfulResponseCodeException {
         int statusCode = 0;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/auth?redemptionStartSeconds="
+            URI uri = new URI("https://" + host + "/v1/archives/auth?redemptionStartSeconds="
                     +startSeconds+"&redemptionEndSeconds="+endSeconds);
             LOG.info("get backup authcredenials from/to with uri = "+uri);
             Map<String, List<String>> headers = new HashMap<>();
@@ -346,10 +353,10 @@ public class NetworkAPI {
         throw new NonSuccessfulResponseCodeException(statusCode);
     }
 
-    public static String getArchive(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
+    public String getArchive(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives");
+            URI uri = new URI("https://" + host + "/v1/archives");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
@@ -368,10 +375,10 @@ public class NetworkAPI {
      * @return true if this worked without issues, false if there were non-server issues
      * @throws NonSuccessfulResponseCodeException in case the server rejected our call (no 204 response)
      */
-    public static boolean setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
+    public boolean setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/keys");
+            URI uri = new URI("https://" + host + "/v1/archives/keys");
             String key = Base64.encodeBytes(publicKey.serialize());
             String body = "{\"backupIdPublicKey\": \"" + key + "\"}";
             LOG.info("SEND BODY: " + body);
@@ -387,10 +394,10 @@ public class NetworkAPI {
         return true;
     }
 
-    public static String getArchiveMessageBackupUploadForm(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
+    public String getArchiveMessageBackupUploadForm(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/upload/form");
+            URI uri = new URI("https://" + host + "/v1/archives/upload/form");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
@@ -401,10 +408,10 @@ public class NetworkAPI {
         return response.body().string();
     }
     
-    public static String getReadCredentials(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
+    public String getReadCredentials(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/auth/read?cdn=3");
+            URI uri = new URI("https://" + host + "/v1/archives/auth/read?cdn=3");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
@@ -416,10 +423,10 @@ public class NetworkAPI {
         return response.body().string();
     }
 
-    public static String listMedia(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
+    public String listMedia(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/media");
+            URI uri = new URI("https://" + host + "/v1/archives/media");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException| IOException  ex) {
             LOG.log(Level.SEVERE, null, ex);
@@ -431,10 +438,10 @@ public class NetworkAPI {
         return response.body().string();
     }
 
-    public static String copyAttachmentMedia(ArchiveCredentialPresentation credentials, CopyMediaRequest copyMediaRequest) throws NonSuccessfulResponseCodeException {
+    public String copyAttachmentMedia(ArchiveCredentialPresentation credentials, CopyMediaRequest copyMediaRequest) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + HOST + "/v1/archives/media");
+            URI uri = new URI("https://" + host + "/v1/archives/media");
             ObjectMapper mapper = new ObjectMapper();
             String payload = mapper.writeValueAsString(copyMediaRequest);
             LOG.info("request to copy/archive attachment with payload "+payload);

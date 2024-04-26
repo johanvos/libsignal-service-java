@@ -278,12 +278,14 @@ public class PushServiceSocket {
     private GrpcClient grpcClient;
 
     private static final Logger LOG = Logger.getLogger(PushServiceSocket.class.getName());
+    private boolean useQuic;
 
     public PushServiceSocket(SignalServiceConfiguration configuration,
             CredentialsProvider credentialsProvider,
             String signalAgent,
             ClientZkProfileOperations clientZkProfileOperations,
-            boolean automaticNetworkRetry) {
+            boolean automaticNetworkRetry,
+            boolean useQuic) {
         this.credentialsProvider = credentialsProvider;
         this.signalAgent = signalAgent;
         this.automaticNetworkRetry = automaticNetworkRetry;
@@ -305,6 +307,7 @@ public class PushServiceSocket {
             LOG.info("grpc target for grpcClient = " + target);
             grpcClient = new GrpcClient(target);
         }
+        this.useQuic = useQuic;
     }
 
     public void requestSmsVerificationCode(boolean androidSmsRetriever, Optional<String> captchaToken, Optional<String> challenge) throws IOException {
@@ -2021,7 +2024,7 @@ public class PushServiceSocket {
         return serviceConnectionHolders.toArray(new ServiceConnectionHolder[0]);
     }
 
-    private static Map<Integer, ConnectionHolder[]> createCdnClientsMap(final Map<Integer, SignalCdnUrl[]> signalCdnUrlMap,
+    private  Map<Integer, ConnectionHolder[]> createCdnClientsMap(final Map<Integer, SignalCdnUrl[]> signalCdnUrlMap,
 
             final Optional<SignalProxy> proxy) {
         validateConfiguration(signalCdnUrlMap);
@@ -2039,7 +2042,7 @@ public class PushServiceSocket {
         }
     }
 
-    private static ConnectionHolder[] createConnectionHolders(SignalUrl[] urls, Optional<SignalProxy> proxy) {
+    private ConnectionHolder[] createConnectionHolders(SignalUrl[] urls, Optional<SignalProxy> proxy) {
         List<ConnectionHolder> connectionHolders = new LinkedList<>();
 
         for (SignalUrl url : urls) {
@@ -2049,8 +2052,8 @@ public class PushServiceSocket {
         return connectionHolders.toArray(new ConnectionHolder[0]);
     }
 
-    private static NetworkClient createConnectionClient(SignalUrl url, Optional<SignalProxy> proxy) {
-      return NetworkClient.createNetworkClient(url, "FOO", true);
+    private NetworkClient createConnectionClient(SignalUrl url, Optional<SignalProxy> proxy) {
+      return NetworkClient.createNetworkClient(url, "FOO", true, useQuic);
     }
 
     private String getAuthorizationHeader(CredentialsProvider credentialsProvider) {

@@ -78,8 +78,6 @@ import org.whispersystems.util.Base64;
  */
 public abstract class NetworkClient {
 
-    private boolean useQuic;
-
     final SignalUrl signalUrl;
     final String signalAgent;
     final boolean allowStories;
@@ -92,24 +90,23 @@ public abstract class NetworkClient {
 
     private final Map<Long, OutgoingRequest> outgoingRequests = new HashMap<>();
 
-    private Thread formatProcessingThread;
+    final private Thread formatProcessingThread;
 
     private boolean closed = false;
     private static final String SERVER_DELIVERED_TIMESTAMP_HEADER = "X-Signal-Timestamp";
     private boolean websocketCreated = false;
     
-    public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp) {
-        return createNetworkClient(url, cp, null, Optional.empty(), false);
+    public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, boolean useQuic) {
+        return createNetworkClient(url, cp, null, Optional.empty(), false, useQuic);
     }
 
-    public static NetworkClient createNetworkClient(SignalUrl url, String agent, boolean allowStories) {
-        return createNetworkClient(url, Optional.empty(), agent, Optional.empty(), allowStories);
+    public static NetworkClient createNetworkClient(SignalUrl url, String agent, boolean allowStories, boolean useQuic) {
+        return createNetworkClient(url, Optional.empty(), agent, Optional.empty(), allowStories, useQuic);
     }
 
-    public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String agent, Optional<ConnectivityListener> cl, boolean allowStories) {
-        String property = System.getProperty("wave.quic", "true");
-        boolean useQuic = "true".equals(property.toLowerCase());
-        LOG.info("Creating Networkclient with url " + (url != null ? url.getUrl() : "NULL") +", using quic? "+ useQuic);
+    public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String agent,
+            Optional<ConnectivityListener> cl, boolean allowStories, boolean useQuic) {
+        LOG.info("Creating Networkclient with url " + (url != null ? url.getUrl() : "NULL") + ", using quic? " + useQuic);
         if (useQuic) {
             return new QuicNetworkClient(url, cp, agent, cl, allowStories);
         } else {
@@ -118,9 +115,6 @@ public abstract class NetworkClient {
     }
 
     public NetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String signalAgent, Optional<ConnectivityListener> connectivityListener, boolean allowStories) {
-        String property = System.getProperty("wave.quic", "true");
-
-        this.useQuic = "true".equals(property.toLowerCase());
         this.signalUrl = url;
         this.signalAgent = signalAgent;
         this.allowStories = allowStories;
