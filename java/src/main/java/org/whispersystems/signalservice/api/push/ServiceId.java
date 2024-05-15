@@ -76,7 +76,7 @@ public class ServiceId {
             ServiceId answer = fromLibSignal(lsServiceId);
             return answer;
         } catch (org.signal.libsignal.protocol.ServiceId.InvalidServiceIdException ex) {
-            LOG.log(Level.SEVERE, null, ex);
+            LOG.fine("problem parsing a serviceId, return null");
         }
         return null;
     }
@@ -90,7 +90,7 @@ public class ServiceId {
                 return fromLibSignal(org.signal.libsignal.protocol.ServiceId.parseFromBinary(raw));
             }
         } catch (org.signal.libsignal.protocol.ServiceId.InvalidServiceIdException ex) {
-            LOG.log(Level.SEVERE, null, ex);
+            LOG.fine("problem parsing a serviceId, return null");
         }
         return null;
     }
