@@ -2248,7 +2248,6 @@ public class PushServiceSocket {
                 null,
                 NO_HEADERS,
                 Optional.empty());
-              System.err.println("RETRIEVEGROUPCRED => "+response);
         return JsonUtil.fromJson(response, CredentialResponse.class);
     }
 //       public CredentialResponse retrieveGroupsV2Credentials(int today)
