@@ -38,6 +38,9 @@ public final class SignalContactRecord implements SignalRecord {
   private final Optional<byte[]> profileKey;
   private final Optional<String> username;
   private final Optional<byte[]> identityKey;
+  private final Optional<String> nickGivenName;
+  private final Optional<String> nickFamilyName;
+  private final Optional<String> nickNote;
   
   private static final Logger LOG = Logger.getLogger(SignalContactRecord.class.getName());
 
@@ -56,6 +59,15 @@ public final class SignalContactRecord implements SignalRecord {
     this.profileKey        = OptionalUtil.absentIfEmpty(proto.getProfileKey());
     this.username          = OptionalUtil.absentIfEmpty(proto.getUsername());
     this.identityKey       = OptionalUtil.absentIfEmpty(proto.getIdentityKey());
+    if (proto.hasNickname()) {
+        ContactRecord.Name cName = proto.getNickname();
+        this.nickGivenName = Optional.ofNullable(cName.getGiven());
+        this.nickFamilyName = Optional.ofNullable(cName.getFamily());
+    } else {
+        this.nickGivenName = Optional.empty();
+        this.nickFamilyName = Optional.empty();
+    }
+    this.nickNote = OptionalUtil.absentIfEmpty(proto.getNote());
   }
 
   @Override
@@ -218,6 +230,18 @@ public final class SignalContactRecord implements SignalRecord {
     return systemNickname;
   }
 
+  public Optional<String> getNickGivenName() {
+    return nickGivenName;
+  }
+
+  public Optional<String> getNickFamilyName() {
+    return nickFamilyName;
+  }
+
+  public Optional<String> getNickNote() {
+    return nickNote;
+  }
+
   public Optional<byte[]> getProfileKey() {
     return profileKey;
   }
@@ -350,6 +374,18 @@ public final class SignalContactRecord implements SignalRecord {
     public Builder setUsername(String username) {
       builder.setUsername(username == null ? "" : username);
       return this;
+    }
+
+    public Builder setNickFullName(String givenName, String familyName) {
+        builder.setNickname(ContactRecord.Name.newBuilder()
+                .setGiven(givenName == null ? "" : givenName)
+                .setFamily(familyName == null ? "" : familyName));
+        return this;
+    }
+
+    public Builder setNickNote(String note) {
+        builder.setNote(note);
+        return this;
     }
 
     public Builder setIdentityKey(byte[] identityKey) {
