@@ -17,7 +17,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -109,14 +108,6 @@ public class LegacyNetworkClient extends NetworkClient {
         LOG.info("Send request, not using kwik with method "+request.method()+" and address = "+request.uri());
         response = CompletableFuture.completedFuture(getDirectResponse(request));
         LOG.info("Got response, not using kwik");
-Thread.dumpStack();
-        try {
-            LOG.info("Response  body = "+response.get().body());
-        } catch (InterruptedException ex) {
-            Logger.getLogger(LegacyNetworkClient.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ExecutionException ex) {
-            Logger.getLogger(LegacyNetworkClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         return response;
     }
 

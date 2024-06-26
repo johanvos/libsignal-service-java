@@ -744,8 +744,6 @@ public class PushServiceSocket {
 
         return FutureTransformers.map(response, body -> {
             try {
-                System.err.println("RAWPROFILE = " + response);
-                System.err.println("BODY = " + body);
                 return JsonUtil.fromJson(body, SignalServiceProfile.class);
             } catch (IOException e) {
                 Log.w(TAG, e);
@@ -778,7 +776,6 @@ public class PushServiceSocket {
                                          NO_HEADERS,
                                          PaymentsRegionException::responseCodeHandler,
                                          Optional.empty());
-    LOG.info("Response from writeProfile = "+response);
     if (signalServiceProfileWrite.hasAvatar() && profileAvatar != null) {
       try {
         formAttributes = JsonUtil.fromJson(response, ProfileAvatarUploadAttributes.class);
@@ -1612,7 +1609,7 @@ public class PushServiceSocket {
             String rawBody) throws IOException {
 //
         Response response = getServiceConnection(urlFragment, method, body, headers, unidentifiedAccessKey, doNotAddAuthenticationOrUnidentifiedAccessKey, rawBody);
-        LOG.info("status = "+response.getStatusCode()+" and body = "+new String(response.body().bytes()));
+        LOG.finest("status = "+response.getStatusCode()+" and body = "+new String(response.body().bytes()));
         return response;
 //        ResponseBody responseBody = response.body();
 //        try {
