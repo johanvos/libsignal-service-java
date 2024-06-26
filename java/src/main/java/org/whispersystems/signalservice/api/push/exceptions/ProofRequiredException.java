@@ -42,7 +42,10 @@ public class ProofRequiredException extends NonSuccessfulResponseCodeException {
 
     for (String raw : rawOptions) {
       switch (raw) {
-        case "recaptcha":
+        case "captcha":
+          options.add(Option.CAPTCHA);
+          break;
+         case "recaptcha":
           options.add(Option.RECAPTCHA);
           break;
         case "pushChallenge":
@@ -58,6 +61,6 @@ public class ProofRequiredException extends NonSuccessfulResponseCodeException {
   }
 
   public enum Option {
-    RECAPTCHA, PUSH_CHALLENGE
+    @Deprecated RECAPTCHA, CAPTCHA, PUSH_CHALLENGE
   }
 }

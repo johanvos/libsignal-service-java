@@ -648,6 +648,7 @@ private WebsocketResponse validateWebsocketResponse(WebsocketResponse response)
                         basicStorageCredentials);
             case 428:
                 LOG.info("Whoops, PSS got statuscode 428");
+                LOG.warning("428, body = "+response.getBody());
                 ProofRequiredResponse proofRequiredResponse = readResponseJson(response, ProofRequiredResponse.class);
                 long retryAfter = -1;
                 try {
