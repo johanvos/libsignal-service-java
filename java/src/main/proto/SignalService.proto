@@ -624,17 +624,69 @@ message SyncMessage {
   }
 
   message CallLinkUpdate {
+    enum Type {
+      UPDATE = 0;
+      DELETE = 1;
+    }
+
     optional bytes rootKey      = 1;
     optional bytes adminPassKey = 2;
+    optional Type  type         = 3;
   }
 
   message CallLogEvent {
     enum Type {
-      CLEAR = 0;
+      CLEAR                          = 0;
+      MARKED_AS_READ                 = 1;
+      MARKED_AS_READ_IN_CONVERSATION = 2;
     }
 
-    optional Type   type      = 1;
-    optional uint64 timestamp = 2;
+    optional Type   type          = 1;
+    optional uint64 timestamp     = 2;
+    /* Data identifying a conversation. The service ID for 1:1, the group ID for
+     * group, or the room ID for an ad-hoc call. See also
+     * `CallEvent/conversationId`. */
+    optional bytes conversationId = 3;
+    /* An identifier for a call. Generated directly for 1:1, or derived from
+     * the era ID for group and ad-hoc calls. See also `CallEvent/callId`. */
+    optional uint64 callId        = 4;
+  }
+
+  message DeleteForMe {
+    message ConversationIdentifier {
+      oneof identifier {
+        string threadAci = 1;
+        bytes threadGroupId = 2;
+        string threadE164 = 3;
+      }
+    }
+
+    message AddressableMessage {
+      oneof author {
+        string authorAci = 1;
+        string authorE164 = 2;
+      }
+      optional uint64 sentTimestamp = 3;
+    }
+
+    message MessageDeletes {
+      optional ConversationIdentifier conversation = 1;
+      repeated AddressableMessage messages = 2;
+    }
+
+    message ConversationDelete {
+      optional ConversationIdentifier conversation = 1;
+      repeated AddressableMessage mostRecentMessages = 2;
+      optional bool isFullDelete = 3;
+    }
+
+    message LocalOnlyConversationDelete {
+      optional ConversationIdentifier conversation = 1;
+    }
+
+    repeated MessageDeletes messageDeletes = 1;
+    repeated ConversationDelete conversationDeletes = 2;
+    repeated LocalOnlyConversationDelete localOnlyConversationDeletes = 3;
   }
 
   optional Sent                   sent                   = 1;
