@@ -2104,55 +2104,7 @@ public class SignalServiceMessageSender {
     }
 
     private AttachmentPointer createAttachmentPointer(SignalServiceAttachmentPointer attachment) {
-        AttachmentPointer.Builder builder = AttachmentPointer.newBuilder()
-                .setCdnNumber(attachment.getCdnNumber())
-                .setContentType(attachment.getContentType())
-                .setKey(ByteString.copyFrom(attachment.getKey()))
-                .setDigest(ByteString.copyFrom(attachment.getDigest().get()))
-                .setSize(attachment.getSize().get())
-                .setUploadTimestamp(attachment.getUploadTimestamp());
-
-        if (attachment.getRemoteId().getV2().isPresent()) {
-            builder.setCdnId(attachment.getRemoteId().getV2().get());
-        }
-
-        if (attachment.getRemoteId().getV3().isPresent()) {
-            builder.setCdnKey(attachment.getRemoteId().getV3().get());
-        }
-
-        if (attachment.getFileName().isPresent()) {
-            builder.setFileName(attachment.getFileName().get());
-        }
-
-        if (attachment.getPreview().isPresent()) {
-            builder.setThumbnail(ByteString.copyFrom(attachment.getPreview().get()));
-        }
-
-        if (attachment.getWidth() > 0) {
-            builder.setWidth(attachment.getWidth());
-        }
-
-        if (attachment.getHeight() > 0) {
-            builder.setHeight(attachment.getHeight());
-        }
-
-        if (attachment.getVoiceNote()) {
-            builder.setFlags(AttachmentPointer.Flags.VOICE_MESSAGE_VALUE);
-        }
-
-        if (attachment.isBorderless()) {
-            builder.setFlags(AttachmentPointer.Flags.BORDERLESS_VALUE);
-        }
-
-        if (attachment.getCaption().isPresent()) {
-            builder.setCaption(attachment.getCaption().get());
-        }
-
-        if (attachment.getBlurHash().isPresent()) {
-            builder.setBlurHash(attachment.getBlurHash().get());
-        }
-
-        return builder.build();
+        return attachment.toAttachmentPointerBuilder().build();
     }
 
     private AttachmentPointer createAttachmentPointer(SignalServiceAttachmentStream attachment)
@@ -2161,69 +2113,10 @@ public class SignalServiceMessageSender {
     }
 
     private TextAttachment createTextAttachment(SignalServiceTextAttachment attachment) throws IOException {
-        TextAttachment.Builder builder = TextAttachment.newBuilder();
-
-        if (attachment.getStyle().isPresent()) {
-            switch (attachment.getStyle().get()) {
-                case DEFAULT:
-                    builder.setTextStyle(TextAttachment.Style.DEFAULT);
-                    break;
-                case REGULAR:
-                    builder.setTextStyle(TextAttachment.Style.REGULAR);
-                    break;
-                case BOLD:
-                    builder.setTextStyle(TextAttachment.Style.BOLD);
-                    break;
-                case SERIF:
-                    builder.setTextStyle(TextAttachment.Style.SERIF);
-                    break;
-                case SCRIPT:
-                    builder.setTextStyle(TextAttachment.Style.SCRIPT);
-                    break;
-                case CONDENSED:
-                    builder.setTextStyle(TextAttachment.Style.CONDENSED);
-                    break;
-                default:
-                    throw new AssertionError("Unknown type: " + attachment.getStyle().get());
-            }
-        }
-
-        TextAttachment.Gradient.Builder gradientBuilder = TextAttachment.Gradient.newBuilder();
-
-        if (attachment.getBackgroundGradient().isPresent()) {
-            SignalServiceTextAttachment.Gradient gradient = attachment.getBackgroundGradient().get();
-
-            if (gradient.getAngle().isPresent()) {
-                gradientBuilder.setAngle(gradient.getAngle().get());
-            }
-
-            if (!gradient.getColors().isEmpty()) {
-                gradientBuilder.setStartColor(gradient.getColors().get(0));
-                gradientBuilder.setEndColor(gradient.getColors().get(gradient.getColors().size() - 1));
-            }
-
-            gradientBuilder.addAllColors(gradient.getColors());
-            gradientBuilder.addAllPositions(gradient.getPositions());
-
-            builder.setGradient(gradientBuilder.build());
-        }
-
-        if (attachment.getText().isPresent()) {
-            builder.setText(attachment.getText().get());
-        }
-        if (attachment.getTextForegroundColor().isPresent()) {
-            builder.setTextForegroundColor(attachment.getTextForegroundColor().get());
-        }
-        if (attachment.getTextBackgroundColor().isPresent()) {
-            builder.setTextBackgroundColor(attachment.getTextBackgroundColor().get());
-        }
+        TextAttachment.Builder builder = attachment.toTextAttachmentBuilder();
         if (attachment.getPreview().isPresent()) {
             builder.setPreview(createPreview(attachment.getPreview().get()));
         }
-        if (attachment.getBackgroundColor().isPresent()) {
-            builder.setColor(attachment.getBackgroundColor().get());
-        }
-
         return builder.build();
     }
 

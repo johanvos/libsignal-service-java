@@ -1,8 +1,11 @@
 package org.whispersystems.signalservice.api.messages;
 
 
+import com.google.protobuf.MessageLite;
 import java.util.List;
 import java.util.Optional;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos.TextAttachment;
 
 public class SignalServiceTextAttachment {
 
@@ -87,6 +90,73 @@ public class SignalServiceTextAttachment {
   public Optional<Integer> getBackgroundColor() {
     return backgroundColor;
   }
+
+    public TextAttachment.Builder toTextAttachmentBuilder() {
+        TextAttachment.Builder builder = TextAttachment.newBuilder();
+
+        if (getStyle().isPresent()) {
+            switch (getStyle().get()) {
+                case DEFAULT:
+                    builder.setTextStyle(TextAttachment.Style.DEFAULT);
+                    break;
+                case REGULAR:
+                    builder.setTextStyle(TextAttachment.Style.REGULAR);
+                    break;
+                case BOLD:
+                    builder.setTextStyle(TextAttachment.Style.BOLD);
+                    break;
+                case SERIF:
+                    builder.setTextStyle(TextAttachment.Style.SERIF);
+                    break;
+                case SCRIPT:
+                    builder.setTextStyle(TextAttachment.Style.SCRIPT);
+                    break;
+                case CONDENSED:
+                    builder.setTextStyle(TextAttachment.Style.CONDENSED);
+                    break;
+                default:
+                    throw new AssertionError("Unknown type: " + getStyle().get());
+            }
+        }
+
+        TextAttachment.Gradient.Builder gradientBuilder = TextAttachment.Gradient.newBuilder();
+
+        if (getBackgroundGradient().isPresent()) {
+            SignalServiceTextAttachment.Gradient gradient = getBackgroundGradient().get();
+
+            if (gradient.getAngle().isPresent()) {
+                gradientBuilder.setAngle(gradient.getAngle().get());
+            }
+
+            if (!gradient.getColors().isEmpty()) {
+                gradientBuilder.setStartColor(gradient.getColors().get(0));
+                gradientBuilder.setEndColor(gradient.getColors().get(gradient.getColors().size() - 1));
+            }
+
+            gradientBuilder.addAllColors(gradient.getColors());
+            gradientBuilder.addAllPositions(gradient.getPositions());
+
+            builder.setGradient(gradientBuilder.build());
+        }
+
+        if (getText().isPresent()) {
+            builder.setText(getText().get());
+        }
+        if (getTextForegroundColor().isPresent()) {
+            builder.setTextForegroundColor(getTextForegroundColor().get());
+        }
+        if (getTextBackgroundColor().isPresent()) {
+            builder.setTextBackgroundColor(getTextBackgroundColor().get());
+        }
+        if (getBackgroundColor().isPresent()) {
+            builder.setColor(getBackgroundColor().get());
+        }
+//        if (getPreview().isPresent()) {
+//            builder.setPreview(createPreview(getPreview().get()));
+//        }
+        return builder;
+    }
+
 
   public static class Gradient {
     private final Optional<Integer> angle;

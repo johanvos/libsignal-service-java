@@ -6,9 +6,12 @@
 
 package org.whispersystems.signalservice.api.messages;
 
+import com.google.protobuf.ByteString;
 import java.util.Optional;
 
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos.AttachmentPointer;
 
 /**
  * Represents a received SignalServiceAttachment "handle."  This
@@ -153,4 +156,56 @@ public class SignalServiceAttachmentPointer extends SignalServiceAttachment {
   public long getUploadTimestamp() {
     return uploadTimestamp;
   }
+  
+  public AttachmentPointer.Builder toAttachmentPointerBuilder() {
+     SignalServiceProtos.AttachmentPointer.Builder builder = SignalServiceProtos.AttachmentPointer.newBuilder()
+                .setCdnNumber(getCdnNumber())
+                .setContentType(getContentType())
+                .setKey(ByteString.copyFrom(getKey()))
+                .setDigest(ByteString.copyFrom(getDigest().get()))
+                .setSize(getSize().get())
+                .setUploadTimestamp(getUploadTimestamp());
+
+        if (getRemoteId().getV2().isPresent()) {
+            builder.setCdnId(getRemoteId().getV2().get());
+        }
+
+        if (getRemoteId().getV3().isPresent()) {
+            builder.setCdnKey(getRemoteId().getV3().get());
+        }
+
+        if (getFileName().isPresent()) {
+            builder.setFileName(getFileName().get());
+        }
+
+        if (getPreview().isPresent()) {
+            builder.setThumbnail(ByteString.copyFrom(getPreview().get()));
+        }
+
+        if (getWidth() > 0) {
+            builder.setWidth(getWidth());
+        }
+
+        if (getHeight() > 0) {
+            builder.setHeight(getHeight());
+        }
+
+        if (getVoiceNote()) {
+            builder.setFlags(SignalServiceProtos.AttachmentPointer.Flags.VOICE_MESSAGE_VALUE);
+        }
+
+        if (isBorderless()) {
+            builder.setFlags(SignalServiceProtos.AttachmentPointer.Flags.BORDERLESS_VALUE);
+        }
+
+        if (getCaption().isPresent()) {
+            builder.setCaption(getCaption().get());
+        }
+
+        if (getBlurHash().isPresent()) {
+            builder.setBlurHash(getBlurHash().get());
+        }
+
+        return builder;
+}
 }
