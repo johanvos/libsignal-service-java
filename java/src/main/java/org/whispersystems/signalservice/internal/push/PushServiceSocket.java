@@ -1170,8 +1170,9 @@ public class PushServiceSocket {
         }
         try {
             HttpRequest request = builder.build();
-            LOG.finest("Get from CDN: "+request.uri()+" and headers = "+request.headers());
+            LOG.info("Send request to CDN: "+request.uri()+" and headers = "+request.headers());
             Response response = client.sendRequest(request, new byte[0]);
+            LOG.info("Got response: " + response.getStatusCode());
 
             if (response.isSuccessful()) {
                 ResponseBody body = response.body();
@@ -1188,7 +1189,8 @@ public class PushServiceSocket {
             } else if (response.getStatusCode() == 416) {
                 throw new RangeException(offset);
             }
-        } catch (IOException ioe) {
+        } catch (Exception ioe) {
+            ioe.printStackTrace();
             throw new PushNetworkException(ioe);
         }
     }
