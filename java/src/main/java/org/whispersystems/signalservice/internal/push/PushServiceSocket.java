@@ -744,6 +744,7 @@ public class PushServiceSocket {
 
         return FutureTransformers.map(response, body -> {
             try {
+                System.err.println("BODY = "+body);
                 return JsonUtil.fromJson(body, SignalServiceProfile.class);
             } catch (IOException e) {
                 Log.w(TAG, e);
