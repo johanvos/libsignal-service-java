@@ -32,6 +32,7 @@ public class SignalServiceDataMessage {
   private final boolean                                 endSession;
   private final boolean                                 expirationUpdate;
   private final int                                     expiresInSeconds;
+  private final int                                     expireTimerVersion;
   private final boolean                                 profileKeyUpdate;
   private final Optional<Quote>                         quote;
   private final Optional<List<SharedContact>>           contacts;
@@ -58,7 +59,7 @@ public class SignalServiceDataMessage {
    */
   SignalServiceDataMessage(long timestamp,SignalServiceGroupV2 groupV2,
                            List<SignalServiceAttachment> attachments,
-                           String body, boolean endSession, int expiresInSeconds,
+                           String body, boolean endSession, int expiresInSeconds, int expireTimerVersion,
                            boolean expirationUpdate, byte[] profileKey, boolean profileKeyUpdate,
                            Quote quote, List<SharedContact> sharedContacts, List<SignalServicePreview> previews,
                            List<Mention> mentions, Sticker sticker, boolean viewOnce, Reaction reaction, RemoteDelete remoteDelete,
@@ -73,6 +74,7 @@ public class SignalServiceDataMessage {
     this.body             = OptionalUtil.absentIfEmpty(body);
     this.endSession       = endSession;
     this.expiresInSeconds = expiresInSeconds;
+    this.expireTimerVersion = expireTimerVersion;
     this.expirationUpdate = expirationUpdate;
     this.profileKey       = Optional.ofNullable(profileKey);
     this.profileKeyUpdate = profileKeyUpdate;
@@ -199,6 +201,10 @@ public class SignalServiceDataMessage {
     return expiresInSeconds;
   }
 
+  public int getExpireTimerVersion() {
+    return expireTimerVersion;
+  }
+
   public Optional<byte[]> getProfileKey() {
     return profileKey;
   }
@@ -269,6 +275,7 @@ public class SignalServiceDataMessage {
     private String               body;
     private boolean              endSession;
     private int                  expiresInSeconds;
+    private int                  expireTimerVersion;
     private boolean              expirationUpdate;
     private byte[]               profileKey;
     private boolean              profileKeyUpdate;
@@ -341,6 +348,11 @@ public class SignalServiceDataMessage {
 
     public Builder withExpiration(int expiresInSeconds) {
       this.expiresInSeconds = expiresInSeconds;
+      return this;
+    }
+
+    public Builder withExpireTimerVersion(int expireTimerVersion) {
+      this.expireTimerVersion = expireTimerVersion;
       return this;
     }
 
@@ -435,7 +447,7 @@ public class SignalServiceDataMessage {
     public SignalServiceDataMessage build() {
       if (timestamp == 0) timestamp = System.currentTimeMillis();
       return new SignalServiceDataMessage(timestamp, groupV2, attachments, body, endSession,
-                                          expiresInSeconds, expirationUpdate, profileKey,
+                                          expiresInSeconds, expireTimerVersion, expirationUpdate, profileKey,
                                           profileKeyUpdate, quote, sharedContacts, previews,
                                           mentions, sticker, viewOnce, reaction, remoteDelete,
                                           groupCallUpdate, payment, storyContext, giftBadge, bodyRanges);
