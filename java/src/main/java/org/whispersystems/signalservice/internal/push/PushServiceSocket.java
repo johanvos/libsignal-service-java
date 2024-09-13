@@ -735,7 +735,7 @@ public class PushServiceSocket {
     }
 
     public ListenableFuture<SignalServiceProfile> retrieveVersionedProfile(ACI target, ProfileKey profileKey, Optional<UnidentifiedAccess> unidentifiedAccess, Locale locale) {
-        System.err.println("Retrieve profile for ACI = "+target+" with lsa = "+target.getLibSignalAci());
+        LOG.info("Retrieve profile for ACI = "+target+" with lsa = "+target.getLibSignalAci());
         ProfileKeyVersion profileKeyIdentifier = profileKey.getProfileKeyVersion(target.getLibSignalAci());
 
         String version = profileKeyIdentifier.serialize();
@@ -744,7 +744,7 @@ public class PushServiceSocket {
 
         return FutureTransformers.map(response, body -> {
             try {
-                System.err.println("BODY = "+body);
+                LOG.finer("received body: "+body);
                 return JsonUtil.fromJson(body, SignalServiceProfile.class);
             } catch (IOException e) {
                 Log.w(TAG, e);
