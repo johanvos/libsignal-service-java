@@ -127,6 +127,7 @@ import org.whispersystems.signalservice.api.messages.SignalServicePreview;
 import org.whispersystems.signalservice.api.messages.SignalServiceStoryMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceStoryMessageRecipient;
 import org.whispersystems.signalservice.api.messages.SignalServiceTextAttachment;
+import org.whispersystems.signalservice.api.messages.multidevice.DeleteForMeMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ViewedMessage;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.ServiceId.PNI;
@@ -568,6 +569,7 @@ public class SignalServiceMessageSender {
     public SendMessageResult sendSyncMessage(SignalServiceSyncMessage message, Optional<UnidentifiedAccessPair> unidentifiedAccess)
             throws IOException, UntrustedIdentityException {
         Content content;
+        LOG.info("Need to send syncMessage");
         boolean urgent = false;
         if (message.getContacts().isPresent()) {
             content = createMultiDeviceContactsContent(message.getContacts().get().getContactsStream().asStream(), message.getContacts().get().isComplete());
@@ -608,6 +610,8 @@ public class SignalServiceMessageSender {
             content = createCallLinkUpdateContent(message.getCallLinkUpdate().get());
         } else if (message.getCallLogEvent().isPresent()) {
             content = createCallLogEventContent(message.getCallLogEvent().get());
+        } else if (message.getDeleteForMe().isPresent()) {
+            content = createMultiDeviceDeleteForMeContent(message.getDeleteForMe().get());
         } else {
             throw new IOException("Unsupported sync message!");
         }
@@ -1419,7 +1423,6 @@ public class SignalServiceMessageSender {
     private Content createMultiDeviceViewOnceOpenContent(ViewOnceOpenMessage readMessage) {
         Content.Builder container = Content.newBuilder();
         SyncMessage.Builder builder = createSyncMessageBuilder();
-
         builder.setViewOnceOpen(SyncMessage.ViewOnceOpen.newBuilder()
                 .setTimestamp(readMessage.getTimestamp())
                 .setSenderAci(readMessage.getSender().toString()));
@@ -1853,6 +1856,33 @@ public class SignalServiceMessageSender {
         }
 
         return results;
+    }
+
+    private Content createMultiDeviceDeleteForMeContent(DeleteForMeMessage deleteForMe) {
+        LOG.info("Create this");
+        try {
+        System.err.println("YESSS");
+        Content.Builder container = Content.newBuilder();
+        SyncMessage.DeleteForMe.Builder builder = SyncMessage.DeleteForMe.newBuilder();
+        SyncMessage.DeleteForMe.MessageDeletes.Builder addMessages = 
+                SyncMessage.DeleteForMe.MessageDeletes.newBuilder()
+                        .setConversation(SyncMessage.DeleteForMe.ConversationIdentifier.newBuilder()
+                        .setThreadAci(deleteForMe.getThreadAci())
+                                .build())
+                .addMessages(SyncMessage.DeleteForMe.AddressableMessage.newBuilder()
+                        .setSentTimestamp(deleteForMe.getSentTimestamp())
+                        .setAuthorAci(deleteForMe.getAuthorAci())
+                        .build());
+        builder.addMessageDeletes(addMessages);
+        container.setSyncMessage(SyncMessage.newBuilder()
+                .setDeleteForMe(builder).build());
+        Content answer = container.build();
+        LOG.info("ANSWER = "+answer);
+        return answer;
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
+        return null;
     }
 
     private SignalServiceSyncMessage createSelfSendSyncMessageForStory(SignalServiceStoryMessage message,
