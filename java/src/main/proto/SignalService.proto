@@ -678,6 +678,7 @@ message SyncMessage {
     message ConversationDelete {
       optional ConversationIdentifier conversation = 1;
       repeated AddressableMessage mostRecentMessages = 2;
+      repeated AddressableMessage mostRecentNonExpiringMessages = 4;
       optional bool isFullDelete = 3;
     }
 
@@ -711,6 +712,7 @@ message SyncMessage {
   optional CallEvent              callEvent              = 19;
   optional CallLinkUpdate         callLinkUpdate         = 20;
   optional CallLogEvent           callLogEvent           = 21;
+  optional DeleteForMe            deleteForMe            = 22;
 }
 
 message AttachmentPointer {
