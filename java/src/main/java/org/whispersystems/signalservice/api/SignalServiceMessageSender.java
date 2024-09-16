@@ -1859,26 +1859,23 @@ public class SignalServiceMessageSender {
     }
 
     private Content createMultiDeviceDeleteForMeContent(DeleteForMeMessage deleteForMe) {
-        LOG.info("Create this");
         try {
-        System.err.println("YESSS");
-        Content.Builder container = Content.newBuilder();
-        SyncMessage.DeleteForMe.Builder builder = SyncMessage.DeleteForMe.newBuilder();
-        SyncMessage.DeleteForMe.MessageDeletes.Builder addMessages = 
-                SyncMessage.DeleteForMe.MessageDeletes.newBuilder()
-                        .setConversation(SyncMessage.DeleteForMe.ConversationIdentifier.newBuilder()
-                        .setThreadAci(deleteForMe.getThreadAci())
-                                .build())
-                .addMessages(SyncMessage.DeleteForMe.AddressableMessage.newBuilder()
-                        .setSentTimestamp(deleteForMe.getSentTimestamp())
-                        .setAuthorAci(deleteForMe.getAuthorAci())
-                        .build());
-        builder.addMessageDeletes(addMessages);
-        container.setSyncMessage(SyncMessage.newBuilder()
-                .setDeleteForMe(builder).build());
-        Content answer = container.build();
-        LOG.info("ANSWER = "+answer);
-        return answer;
+            Content.Builder container = Content.newBuilder();
+            SyncMessage.DeleteForMe.Builder builder = SyncMessage.DeleteForMe.newBuilder();
+            SyncMessage.DeleteForMe.MessageDeletes.Builder addMessages
+                    = SyncMessage.DeleteForMe.MessageDeletes.newBuilder()
+                            .setConversation(SyncMessage.DeleteForMe.ConversationIdentifier.newBuilder()
+                                    .setThreadAci(deleteForMe.getThreadAci())
+                                    .build())
+                            .addMessages(SyncMessage.DeleteForMe.AddressableMessage.newBuilder()
+                                    .setSentTimestamp(deleteForMe.getSentTimestamp())
+                                    .setAuthorAci(deleteForMe.getAuthorAci())
+                                    .build());
+            builder.addMessageDeletes(addMessages);
+            container.setSyncMessage(SyncMessage.newBuilder()
+                    .setDeleteForMe(builder).build());
+            Content answer = container.build();
+            return answer;
         } catch (Throwable t) {
             t.printStackTrace();
         }
