@@ -1860,13 +1860,20 @@ public class SignalServiceMessageSender {
 
     private Content createMultiDeviceDeleteForMeContent(DeleteForMeMessage deleteForMe) {
         try {
+            
+            SyncMessage.DeleteForMe.ConversationIdentifier.Builder convBuilder = SyncMessage.DeleteForMe.ConversationIdentifier.newBuilder();
+            if (deleteForMe.getThreadAci() != null) {
+                convBuilder.setThreadAci(deleteForMe.getThreadAci());
+            }
+            if (deleteForMe.getThreadGroupId()!= null) {
+                convBuilder.setThreadGroupId(ByteString.copyFrom(deleteForMe.getThreadGroupId()));
+            }
+
             Content.Builder container = Content.newBuilder();
             SyncMessage.DeleteForMe.Builder builder = SyncMessage.DeleteForMe.newBuilder();
             SyncMessage.DeleteForMe.MessageDeletes.Builder addMessages
                     = SyncMessage.DeleteForMe.MessageDeletes.newBuilder()
-                            .setConversation(SyncMessage.DeleteForMe.ConversationIdentifier.newBuilder()
-                                    .setThreadAci(deleteForMe.getThreadAci())
-                                    .build())
+                            .setConversation(convBuilder)
                             .addMessages(SyncMessage.DeleteForMe.AddressableMessage.newBuilder()
                                     .setSentTimestamp(deleteForMe.getSentTimestamp())
                                     .setAuthorAci(deleteForMe.getAuthorAci())
