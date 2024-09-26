@@ -133,6 +133,7 @@ import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.ServiceId.PNI;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.util.UuidUtil;
+import org.whispersystems.signalservice.internal.push.AttachmentUploadForm;
 import org.whispersystems.signalservice.internal.push.GroupMismatchedDevices;
 import org.whispersystems.signalservice.internal.push.GroupStaleDevices;
 import org.whispersystems.signalservice.internal.push.SendGroupMessageResponse;
@@ -701,7 +702,12 @@ public class SignalServiceMessageSender {
     }
 
     public ResumableUploadSpec getResumableUploadSpec() throws IOException {
-        throw new UnsupportedOperationException("NYI");
+        AttachmentUploadForm v4UploadAttributes = null;
+        LOG.info("Trying to get v4UploadAttributes");
+        v4UploadAttributes = socket.getAttachmentV4UploadAttributes();
+        LOG.info("Trying to get ResumableUploadSpec based on "+v4UploadAttributes);
+        return socket.getResumableUploadSpec(v4UploadAttributes);
+
     }
 
     private SignalServiceAttachmentPointer uploadAttachmentV4(SignalServiceAttachmentStream attachment, byte[] attachmentKey, PushAttachmentData attachmentData) throws IOException {

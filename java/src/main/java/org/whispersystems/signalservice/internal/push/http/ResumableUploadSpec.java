@@ -7,6 +7,7 @@ import org.whispersystems.signalservice.api.push.exceptions.ResumeLocationInvali
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
+import java.util.Map;
 
 public final class ResumableUploadSpec {
 
@@ -17,13 +18,15 @@ public final class ResumableUploadSpec {
   private final Integer cdnNumber;
   private final String  resumeLocation;
   private final Long    expirationTimestamp;
+  private final Map<String, String> headers;
 
   public ResumableUploadSpec(byte[] secretKey,
                              byte[] iv,
                              String cdnKey,
                              int cdnNumber,
                              String resumeLocation,
-                             long expirationTimestamp)
+                             long expirationTimestamp,
+                             Map<String, String> headers)
   {
     this.secretKey           = secretKey;
     this.iv                  = iv;
@@ -31,6 +34,7 @@ public final class ResumableUploadSpec {
     this.cdnNumber           = cdnNumber;
     this.resumeLocation      = resumeLocation;
     this.expirationTimestamp = expirationTimestamp;
+    this.headers = headers;
   }
 
   public byte[] getSecretKey() {
@@ -82,7 +86,8 @@ public final class ResumableUploadSpec {
           resumableUpload.getCdnKey(),
           resumableUpload.getCdnNumber(),
           resumableUpload.getLocation(),
-          resumableUpload.getTimeout()
+          resumableUpload.getTimeout(),
+              null
       );
     } catch (IOException e) {
       throw new ResumeLocationInvalidException();

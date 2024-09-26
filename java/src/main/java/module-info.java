@@ -14,6 +14,7 @@ module org.whispersystems.service {
     exports org.whispersystems.signalservice.internal.crypto;
     exports org.whispersystems.signalservice.internal.push;
     exports org.whispersystems.signalservice.internal.push.exceptions;
+    exports org.whispersystems.signalservice.internal.push.http;
     exports org.whispersystems.signalservice.internal.storage.protos;
     exports org.whispersystems.signalservice.internal.util;
     exports org.whispersystems.signalservice.internal.util.concurrent;
