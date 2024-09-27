@@ -1874,20 +1874,33 @@ public class SignalServiceMessageSender {
             if (deleteForMe.getThreadGroupId()!= null) {
                 convBuilder.setThreadGroupId(ByteString.copyFrom(deleteForMe.getThreadGroupId()));
             }
-
             Content.Builder container = Content.newBuilder();
             SyncMessage.DeleteForMe.Builder builder = SyncMessage.DeleteForMe.newBuilder();
-            SyncMessage.DeleteForMe.MessageDeletes.Builder addMessages
-                    = SyncMessage.DeleteForMe.MessageDeletes.newBuilder()
-                            .setConversation(convBuilder)
-                            .addMessages(SyncMessage.DeleteForMe.AddressableMessage.newBuilder()
-                                    .setSentTimestamp(deleteForMe.getSentTimestamp())
-                                    .setAuthorAci(deleteForMe.getAuthorAci())
-                                    .build());
-            builder.addMessageDeletes(addMessages);
+            if (deleteForMe.hasMessageDelete()) {
+                SyncMessage.DeleteForMe.MessageDeletes.Builder addMessages
+                        = SyncMessage.DeleteForMe.MessageDeletes.newBuilder()
+                                .setConversation(convBuilder)
+                                .addMessages(SyncMessage.DeleteForMe.AddressableMessage.newBuilder()
+                                        .setSentTimestamp(deleteForMe.getSentTimestamp())
+                                        .setAuthorAci(deleteForMe.getAuthorAci())
+                                        .build());
+                builder.addMessageDeletes(addMessages);
+            }
+            if (deleteForMe.hasConversationDelete()) {
+                SyncMessage.DeleteForMe.ConversationDelete.Builder cbuilder = SyncMessage.DeleteForMe.ConversationDelete.newBuilder();
+                cbuilder.setIsFullDelete(true);
+                cbuilder.setConversation(convBuilder);
+                for (DeleteForMeMessage.AddressableMessage msg : deleteForMe.getMostRecentMessages()) {
+                    cbuilder.addMostRecentMessages(SyncMessage.DeleteForMe.AddressableMessage.newBuilder()
+                            .setAuthorAci(msg.getAuthorAci()).setSentTimestamp(msg.getTimestamp()));
+                }
+                builder.addConversationDeletes(cbuilder);
+            }
+            
             container.setSyncMessage(SyncMessage.newBuilder()
                     .setDeleteForMe(builder).build());
             Content answer = container.build();
+            LOG.info("Content = "+answer);
             return answer;
         } catch (Throwable t) {
             t.printStackTrace();
