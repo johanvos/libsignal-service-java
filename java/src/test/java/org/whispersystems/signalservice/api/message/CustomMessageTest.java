@@ -28,6 +28,7 @@ public class CustomMessageTest {
         String content = "some canvas content";
         SignalServiceProtos.DataMessage.CanvasMessage.Builder builder = SignalServiceProtos.DataMessage.CanvasMessage.newBuilder();
         builder.setContent(content);
+        builder.setVersion(1);
         SignalServiceProtos.DataMessage.CanvasMessage canvas = builder.build();
         ByteString byteString = canvas.toByteString();
         SignalServiceProtos.DataMessage.CanvasMessage parsed = SignalServiceProtos.DataMessage.CanvasMessage.parseFrom(byteString);
