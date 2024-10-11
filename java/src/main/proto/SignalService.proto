@@ -146,6 +146,12 @@ message BodyRange {
   }
 }
 
+message CanvasMessage {
+  required string content = 1;
+  repeated BodyRange bodyRanges = 2;
+  required uint32 version = 3;
+}
+
 message DataMessage {
   enum Flags {
     END_SESSION             = 1;
