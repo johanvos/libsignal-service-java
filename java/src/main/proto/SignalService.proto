@@ -146,11 +146,6 @@ message BodyRange {
   }
 }
 
-message CanvasMessage {
-  required string content = 1;
-  repeated BodyRange bodyRanges = 2;
-}
-
 message DataMessage {
   enum Flags {
     END_SESSION             = 1;
@@ -321,6 +316,11 @@ message DataMessage {
     optional bytes receiptCredentialPresentation = 1;
   }
 
+  message CanvasMessage {
+    required string content = 1;
+    repeated BodyRange bodyRanges = 2;
+  }
+
   enum ProtocolVersion {
     option allow_alias = true;
 
@@ -357,6 +357,7 @@ message DataMessage {
   optional Payment            payment                 = 20;
   optional StoryContext       storyContext            = 21;
   optional GiftBadge          giftBadge               = 22;
+  optional CanvasMessage      canvasMessage           = 101;
 }
 
 message NullMessage {

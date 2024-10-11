@@ -26,11 +26,11 @@ public class CustomMessageTest {
     @Test
     public void canvasMessage() throws InvalidProtocolBufferException {
         String content = "some canvas content";
-        SignalServiceProtos.CanvasMessage.Builder builder = SignalServiceProtos.CanvasMessage.newBuilder();
+        SignalServiceProtos.DataMessage.CanvasMessage.Builder builder = SignalServiceProtos.DataMessage.CanvasMessage.newBuilder();
         builder.setContent(content);
-        SignalServiceProtos.CanvasMessage canvas = builder.build();
+        SignalServiceProtos.DataMessage.CanvasMessage canvas = builder.build();
         ByteString byteString = canvas.toByteString();
-        SignalServiceProtos.CanvasMessage parsed = SignalServiceProtos.CanvasMessage.parseFrom(byteString);
+        SignalServiceProtos.DataMessage.CanvasMessage parsed = SignalServiceProtos.DataMessage.CanvasMessage.parseFrom(byteString);
         assertEquals(content, parsed.getContent());
     }
 }
