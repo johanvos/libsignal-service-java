@@ -320,6 +320,7 @@ message DataMessage {
     required string content = 1;
     repeated BodyRange bodyRanges = 2;
     required uint64 version = 3;
+    required string identifier = 4;
   }
 
   enum ProtocolVersion {

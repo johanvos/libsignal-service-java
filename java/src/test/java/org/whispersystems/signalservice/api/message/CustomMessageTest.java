@@ -2,6 +2,7 @@ package org.whispersystems.signalservice.api.message;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.whispersystems.signalservice.internal.push.LegacySignalServiceProtos;
@@ -29,6 +30,7 @@ public class CustomMessageTest {
         SignalServiceProtos.DataMessage.CanvasMessage.Builder builder = SignalServiceProtos.DataMessage.CanvasMessage.newBuilder();
         builder.setContent(content);
         builder.setVersion(1);
+        builder.setIdentifier(UUID.randomUUID().toString());
         SignalServiceProtos.DataMessage.CanvasMessage canvas = builder.build();
         ByteString byteString = canvas.toByteString();
         SignalServiceProtos.DataMessage.CanvasMessage parsed = SignalServiceProtos.DataMessage.CanvasMessage.parseFrom(byteString);
