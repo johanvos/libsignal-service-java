@@ -18,6 +18,7 @@ import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.BodyRange;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos.DataMessage.CanvasMessage;
 
 /**
  * Represents a decrypted Signal Service data message.
@@ -45,6 +46,7 @@ public class SignalServiceDataMessage {
   private final Optional<GroupCallUpdate>               groupCallUpdate;
   private final Optional <StoryContext>                 storyContext;
   private final Optional<List<BodyRange>>               bodyRanges;
+  private final Optional<CanvasMessage>               canvasMessage;
 
   /**
    * Construct a SignalServiceDataMessage.
@@ -67,7 +69,7 @@ public class SignalServiceDataMessage {
                            Payment payment,
                            StoryContext storyContext,
                            GiftBadge giftBadge,
-                           List<BodyRange> bodyRanges)
+                           List<BodyRange> bodyRanges, CanvasMessage canvasMessage)
   {
     this.group = Optional.ofNullable(groupV2);
     this.timestamp        = timestamp;
@@ -84,7 +86,7 @@ public class SignalServiceDataMessage {
     this.reaction         = Optional.ofNullable(reaction);
     this.remoteDelete     = Optional.ofNullable(remoteDelete);
     this.groupCallUpdate  = Optional.ofNullable(groupCallUpdate);
-
+    this.canvasMessage = Optional.ofNullable(canvasMessage);
     if (attachments != null && !attachments.isEmpty()) {
       this.attachments = Optional.of(attachments);
     } else {
@@ -287,6 +289,7 @@ public class SignalServiceDataMessage {
     private GroupCallUpdate      groupCallUpdate;
     private StoryContext storyContext;
     private GiftBadge giftBadge;
+    private CanvasMessage canvasMessage;
     private Payment payment;
     private List<BodyRange> bodyRanges = new LinkedList<>();
 
@@ -371,6 +374,11 @@ public class SignalServiceDataMessage {
       return this;
     }
 
+    public Builder withCanvasMessage(CanvasMessage m) {
+        this.canvasMessage = m;
+        return this;
+    }
+
     public Builder withSharedContact(SharedContact contact) {
       this.sharedContacts.add(contact);
       return this;
@@ -450,7 +458,7 @@ public class SignalServiceDataMessage {
                                           expiresInSeconds, expireTimerVersion, expirationUpdate, profileKey,
                                           profileKeyUpdate, quote, sharedContacts, previews,
                                           mentions, sticker, viewOnce, reaction, remoteDelete,
-                                          groupCallUpdate, payment, storyContext, giftBadge, bodyRanges);
+                                          groupCallUpdate, payment, storyContext, giftBadge, bodyRanges, canvasMessage);
     }
   }
 
