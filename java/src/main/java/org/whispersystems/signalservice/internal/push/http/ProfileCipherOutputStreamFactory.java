@@ -6,12 +6,13 @@ import org.whispersystems.signalservice.api.crypto.ProfileCipherOutputStream;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 
 public class ProfileCipherOutputStreamFactory implements OutputStreamFactory {
 
-  private final byte[] key;
+  private final ProfileKey key;
 
-  public ProfileCipherOutputStreamFactory(byte[] key) {
+  public ProfileCipherOutputStreamFactory(ProfileKey key) {
     this.key = key;
   }
 

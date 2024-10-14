@@ -6,7 +6,7 @@
 
 package org.whispersystems.signalservice.internal.util;
 
-import org.whispersystems.libsignal.util.Pair;
+import org.signal.libsignal.protocol.util.Pair;
 import org.whispersystems.signalservice.api.push.TrustStore;
 
 import java.io.IOException;
@@ -54,7 +54,6 @@ public class BlacklistingTrustManager implements X509TrustManager {
     try {
       InputStream keyStoreInputStream = trustStore.getKeyStoreInputStream();
       KeyStore    keyStore            = KeyStore.getInstance("BKS");
-
       keyStore.load(keyStoreInputStream, trustStore.getKeyStorePassword().toCharArray());
 
       TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance("X509");

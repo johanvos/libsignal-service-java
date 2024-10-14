@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class Util {
 
@@ -132,13 +133,15 @@ public class Util {
     }
   }
 
-  public static void wait(Object lock, long millis) {
-    try {
-      lock.wait(millis);
-    } catch (InterruptedException e) {
-      throw new AssertionError(e);
+    public static void wait(Object lock, long millis) {
+        try {
+            synchronized (lock) {
+                lock.wait(millis);
+            }
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
     }
-  }
 
   public static int toIntExact(long value) {
     if ((int)value != value) {
@@ -150,5 +153,22 @@ public class Util {
   public static <T> List<T> immutableList(T... elements) {
     return Collections.unmodifiableList(Arrays.asList(elements.clone()));
   }
+
+  public static int parseInt(String integer, int defaultValue) {
+    try {
+      return Integer.parseInt(integer);
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
+  }
+
+  public static long parseLong(String longString, long defaultValue) {
+    try {
+      return Long.parseLong(longString);
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
+  }
+    private static final Logger LOG = Logger.getLogger(Util.class.getName());
 
 }

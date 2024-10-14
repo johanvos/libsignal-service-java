@@ -16,12 +16,12 @@ public class RequestMessage {
     this.request = request;
   }
 
-  public boolean isContactsRequest() {
-    return request.getType() == Request.Type.CONTACTS;
+  public Request getRequest() {
+    return request;
   }
 
-  public boolean isGroupsRequest() {
-    return request.getType() == Request.Type.GROUPS;
+  public boolean isContactsRequest() {
+    return request.getType() == Request.Type.CONTACTS;
   }
 
   public boolean isBlockedListRequest() {
@@ -30,5 +30,21 @@ public class RequestMessage {
 
   public boolean isConfigurationRequest() {
     return request.getType() == Request.Type.CONFIGURATION;
+  }
+
+  public boolean isKeysRequest() {
+    return request.getType() == Request.Type.KEYS;
+  }
+  
+  public boolean isPniIdentityRequest() {
+    return request.getType() == Request.Type.PNI_IDENTITY;
+  }
+
+  public boolean isUrgent() {
+    return isContactsRequest() || isKeysRequest() || isPniIdentityRequest();
+  }
+
+  public Request.Type getType() {
+      return request.getType();
   }
 }

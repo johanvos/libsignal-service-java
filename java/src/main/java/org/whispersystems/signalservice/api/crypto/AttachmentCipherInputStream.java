@@ -6,9 +6,9 @@
 
 package org.whispersystems.signalservice.api.crypto;
 
-import org.whispersystems.libsignal.InvalidMacException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.kdf.HKDFv3;
+import org.signal.libsignal.protocol.InvalidMacException;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.kdf.HKDFv3;
 import org.whispersystems.signalservice.internal.util.ContentLengthInputStream;
 import org.whispersystems.signalservice.internal.util.Util;
 
@@ -51,6 +51,28 @@ public class AttachmentCipherInputStream extends FilterInputStream {
   private long    totalRead;
   private byte[]  overflowBuffer;
 
+  public static InputStream createForAttachment(InputStream encryptedStream, long encryptedLength, int unencryptedLength, long plaintextLength, byte[] combinedKeyMaterial)
+      throws InvalidMessageException, IOException
+  {
+    try {
+      byte[][] parts = Util.split(combinedKeyMaterial, CIPHER_KEY_SIZE, MAC_KEY_SIZE);
+      Mac      mac   = Mac.getInstance("HmacSHA256");
+      mac.init(new SecretKeySpec(parts[1], "HmacSHA256"));
+
+      if (encryptedLength <= BLOCK_SIZE + mac.getMacLength()) {
+        throw new InvalidMessageException("Message shorter than crypto overhead!");
+      }
+      InputStream inputStream = new AttachmentCipherInputStream(encryptedStream, parts[0], encryptedLength - BLOCK_SIZE - mac.getMacLength());
+      if (plaintextLength != 0) {
+        inputStream = new ContentLengthInputStream(inputStream, plaintextLength);
+      }
+
+      return inputStream;
+    } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+      throw new AssertionError(e);
+    }
+  }
+
   public static InputStream createForAttachment(File file, long plaintextLength, byte[] combinedKeyMaterial, byte[] digest)
       throws InvalidMessageException, IOException
   {
@@ -72,7 +94,6 @@ public class AttachmentCipherInputStream extends FilterInputStream {
       }
 
       InputStream inputStream = new AttachmentCipherInputStream(new FileInputStream(file), parts[0], file.length() - BLOCK_SIZE - mac.getMacLength());
-
       if (plaintextLength != 0) {
         inputStream = new ContentLengthInputStream(inputStream, plaintextLength);
       }
@@ -163,7 +184,6 @@ public class AttachmentCipherInputStream extends FilterInputStream {
   private int readFinal(byte[] buffer, int offset, int length) throws IOException {
     try {
       int flourish = cipher.doFinal(buffer, offset);
-
       done = true;
       return flourish;
     } catch (IllegalBlockSizeException | BadPaddingException | ShortBufferException e) {
