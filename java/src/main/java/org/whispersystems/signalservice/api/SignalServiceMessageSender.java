@@ -1205,7 +1205,9 @@ public class SignalServiceMessageSender {
         if (message.getBodyRanges().isPresent()) {
             builder.addAllBodyRanges(message.getBodyRanges().get());
         }
-
+        if (message.getCanvasMessage().isPresent()) {
+            builder.setCanvasMessage(message.getCanvasMessage().get());
+        }
         builder.setTimestamp(message.getTimestamp());
         return builder;
     }

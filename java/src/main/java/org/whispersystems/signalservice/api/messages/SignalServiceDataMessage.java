@@ -264,6 +264,10 @@ public class SignalServiceDataMessage {
     return Optional.ofNullable(groupId);
   }
 
+  public Optional<CanvasMessage> getCanvasMessage() {
+      return this.canvasMessage;
+  }
+
   public static class Builder {
 
     private List<SignalServiceAttachment> attachments    = new LinkedList<>();
