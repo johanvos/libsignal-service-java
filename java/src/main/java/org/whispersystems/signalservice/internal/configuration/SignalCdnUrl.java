@@ -3,7 +3,7 @@ package org.whispersystems.signalservice.internal.configuration;
 
 import org.whispersystems.signalservice.api.push.TrustStore;
 
-import okhttp3.ConnectionSpec;
+import com.gluonhq.snl.doubt.ConnectionSpec;
 
 public class SignalCdnUrl extends SignalUrl {
   public SignalCdnUrl(String url, TrustStore trustStore) {

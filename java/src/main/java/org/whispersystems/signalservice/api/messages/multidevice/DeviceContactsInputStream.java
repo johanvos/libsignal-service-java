@@ -6,11 +6,12 @@
 
 package org.whispersystems.signalservice.api.messages.multidevice;
 
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.logging.Log;
-import org.whispersystems.libsignal.util.guava.Optional;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
+import org.signal.libsignal.protocol.IdentityKey;
+import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.logging.Log;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
@@ -19,6 +20,8 @@ import org.whispersystems.signalservice.internal.util.Util;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
+import org.whispersystems.signalservice.api.push.ServiceId;
 
 public class DeviceContactsInputStream extends ChunkedInputStream {
 
@@ -30,40 +33,43 @@ public class DeviceContactsInputStream extends ChunkedInputStream {
 
   public DeviceContact read() throws IOException {
     long   detailsLength     = readRawVarint32();
+    Log.d(TAG, "need to read "+detailsLength);
     byte[] detailsSerialized = new byte[(int)detailsLength];
     Util.readFully(in, detailsSerialized);
 
     SignalServiceProtos.ContactDetails details = SignalServiceProtos.ContactDetails.parseFrom(detailsSerialized);
 
-    if (!SignalServiceAddress.isValidAddress(details.getUuid(), details.getNumber())) {
+    if (!SignalServiceAddress.isValidAddress(details.getAci(), details.getNumber())) {
       throw new IOException("Missing contact address!");
     }
 
-    SignalServiceAddress                    address     = new SignalServiceAddress(UuidUtil.parseOrNull(details.getUuid()), details.getNumber());
-    Optional<String>                        name        = Optional.fromNullable(details.getName());
-    Optional<SignalServiceAttachmentStream> avatar      = Optional.absent();
-    Optional<String>                        color       = details.hasColor() ? Optional.of(details.getColor()) : Optional.<String>absent();
-    Optional<VerifiedMessage>               verified    = Optional.absent();
-    Optional<byte[]>                        profileKey  = Optional.absent();
-    boolean                                 blocked     = false;
-    Optional<Integer>                       expireTimer = Optional.absent();
-
+    SignalServiceAddress                    address       = new SignalServiceAddress(ServiceId.parseOrThrow(details.getAci()), details.getNumber());
+    Optional<String>                        name          = Optional.ofNullable(details.getName());
+    Optional<SignalServiceAttachmentStream> avatar        = Optional.empty();
+    Optional<String>                        color         = details.hasColor() ? Optional.of(details.getColor()) : Optional.<String>empty();
+    Optional<VerifiedMessage>               verified      = Optional.empty();
+    Optional<ProfileKey>                    profileKey    = Optional.empty();
+    boolean                                 blocked       = false;
+    Optional<Integer>                       expireTimer   = Optional.empty();
+    Optional<Integer>                       inboxPosition = Optional.empty();
+    boolean                                 archived      = false;
+    Log.d(TAG, "retrieved "+name+" with address "+address.getNumber());
     if (details.hasAvatar()) {
+      Log.d(TAG, "we have an avatar for "+name);
       long        avatarLength      = details.getAvatar().getLength();
       InputStream avatarStream      = new LimitedInputStream(in, avatarLength);
       String      avatarContentType = details.getAvatar().getContentType();
-
-      avatar = Optional.of(new SignalServiceAttachmentStream(avatarStream, avatarContentType, avatarLength, Optional.<String>absent(), false, null));
+      Log.d(TAG, "retrieve avatar, lenght = "+avatarLength+ ", contenttype = "+ avatarContentType);
+      avatar = Optional.of(new SignalServiceAttachmentStream(avatarStream, avatarContentType, avatarLength, Optional.<String>empty(), false, false, false, false, null, null));
     }
 
     if (details.hasVerified()) {
       try {
-        if (!SignalServiceAddress.isValidAddress(details.getVerified().getDestinationUuid(), details.getVerified().getDestinationE164())) {
+        if (!SignalServiceAddress.isValidAddress(details.getVerified().getDestinationAci(), null)) {
           throw new InvalidMessageException("Missing Verified address!");
         }
         IdentityKey          identityKey = new IdentityKey(details.getVerified().getIdentityKey().toByteArray(), 0);
-        SignalServiceAddress destination = new SignalServiceAddress(UuidUtil.parseOrNull(details.getVerified().getDestinationUuid()),
-                                                                    details.getVerified().getDestinationE164());
+        SignalServiceAddress destination = new SignalServiceAddress(ServiceId.parseOrThrow(details.getVerified().getDestinationAci()));
 
         VerifiedMessage.VerifiedState state;
 
@@ -77,21 +83,30 @@ public class DeviceContactsInputStream extends ChunkedInputStream {
         verified = Optional.of(new VerifiedMessage(destination, identityKey, state, System.currentTimeMillis()));
       } catch (InvalidKeyException | InvalidMessageException e) {
         Log.w(TAG, e);
-        verified = Optional.absent();
+        verified = Optional.empty();
       }
     }
 
     if (details.hasProfileKey()) {
-      profileKey = Optional.fromNullable(details.getProfileKey().toByteArray());
+      try {
+        profileKey = Optional.ofNullable(new ProfileKey(details.getProfileKey().toByteArray()));
+      } catch (InvalidInputException e) {
+        Log.w(TAG, "Invalid profile key ignored", e);
+      }
     }
 
     if (details.hasExpireTimer() && details.getExpireTimer() > 0) {
       expireTimer = Optional.of(details.getExpireTimer());
     }
 
-    blocked = details.getBlocked();
+    if (details.hasInboxPosition()) {
+      inboxPosition = Optional.of(details.getInboxPosition());
+    }
 
-    return new DeviceContact(address, name, avatar, color, verified, profileKey, blocked, expireTimer);
+    blocked  = details.getBlocked();
+    archived = details.getArchived();
+
+    return new DeviceContact(address, name, avatar, color, verified, profileKey, blocked, expireTimer, inboxPosition, archived);
   }
 
 }

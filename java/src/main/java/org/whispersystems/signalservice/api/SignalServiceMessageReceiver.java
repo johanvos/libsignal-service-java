@@ -6,8 +6,10 @@
 
 package org.whispersystems.signalservice.api;
 
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.util.guava.Optional;
+import com.gluonhq.snl.NetworkClient;
+import org.signal.libsignal.zkgroup.profiles.ClientZkProfileOperations;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
+import org.signal.libsignal.protocol.InvalidMessageException;
 import org.whispersystems.signalservice.api.crypto.AttachmentCipherInputStream;
 import org.whispersystems.signalservice.api.crypto.ProfileCipherInputStream;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
@@ -16,18 +18,19 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPoin
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.messages.SignalServiceStickerManifest;
+import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.util.CredentialsProvider;
 import org.whispersystems.signalservice.api.util.SleepTimer;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.api.websocket.ConnectivityListener;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.PushServiceSocket;
-import org.whispersystems.signalservice.internal.push.SignalServiceEnvelopeEntity;
 import org.whispersystems.signalservice.internal.sticker.StickerProtos;
-import org.whispersystems.signalservice.internal.util.StaticCredentialsProvider;
 import org.whispersystems.signalservice.internal.util.Util;
+import org.whispersystems.signalservice.internal.util.concurrent.FutureTransformers;
+import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.signalservice.internal.websocket.WebSocketConnection;
 
 import java.io.ByteArrayOutputStream;
@@ -36,9 +39,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.function.Consumer;
+import org.whispersystems.signalservice.api.push.ServiceId;
 
 /**
  * The primary interface for receiving Signal Service messages.
@@ -51,27 +57,12 @@ public class SignalServiceMessageReceiver {
   private final PushServiceSocket          socket;
   private final SignalServiceConfiguration urls;
   private final CredentialsProvider        credentialsProvider;
-  private final String                     userAgent;
+  private final String                     signalAgent;
   private final ConnectivityListener       connectivityListener;
   private final SleepTimer                 sleepTimer;
-
-  /**
-   * Construct a SignalServiceMessageReceiver.
-   *
-   * @param urls The URL of the Signal Service.
-   * @param uuid The Signal Service UUID.
-   * @param e164 The Signal Service phone number.
-   * @param password The Signal Service user password.
-   * @param signalingKey The 52 byte signaling key assigned to this user at registration.
-   */
-  public SignalServiceMessageReceiver(SignalServiceConfiguration urls,
-                                      UUID uuid, String e164, String password,
-                                      String signalingKey, String userAgent,
-                                      ConnectivityListener listener,
-                                      SleepTimer timer)
-  {
-    this(urls, new StaticCredentialsProvider(uuid, e164, password, signalingKey), userAgent, listener, timer);
-  }
+  private final ClientZkProfileOperations  clientZkProfileOperations;
+  private final boolean allowStories;
+  private final boolean useQuic;
 
   /**
    * Construct a SignalServiceMessageReceiver.
@@ -81,16 +72,22 @@ public class SignalServiceMessageReceiver {
    */
   public SignalServiceMessageReceiver(SignalServiceConfiguration urls,
                                       CredentialsProvider credentials,
-                                      String userAgent,
+                                      String signalAgent,
                                       ConnectivityListener listener,
-                                      SleepTimer timer)
+                                      SleepTimer timer,
+                                      ClientZkProfileOperations clientZkProfileOperations,
+                                      boolean automaticNetworkRetry, boolean allowStories,
+                                      boolean useQuic)
   {
-    this.urls                 = urls;
-    this.credentialsProvider  = credentials;
-    this.socket               = new PushServiceSocket(urls, credentials, userAgent);
-    this.userAgent            = userAgent;
-    this.connectivityListener = listener;
-    this.sleepTimer           = timer;
+    this.urls                      = urls;
+    this.credentialsProvider       = credentials;
+    this.useQuic = useQuic;
+    this.socket                    = new PushServiceSocket(urls, credentials, signalAgent, clientZkProfileOperations, automaticNetworkRetry, useQuic);
+    this.signalAgent               = signalAgent;
+    this.connectivityListener      = listener;
+    this.sleepTimer                = timer;
+    this.clientZkProfileOperations = clientZkProfileOperations;
+    this.allowStories = allowStories;
   }
 
   /**
@@ -104,23 +101,23 @@ public class SignalServiceMessageReceiver {
    * @throws IOException
    * @throws InvalidMessageException
    */
-  public InputStream retrieveAttachment(SignalServiceAttachmentPointer pointer, File destination, int maxSizeBytes)
-      throws IOException, InvalidMessageException
-  {
+  public InputStream retrieveAttachment(SignalServiceAttachmentPointer pointer, File destination, long maxSizeBytes)
+      throws IOException, InvalidMessageException, MissingConfigurationException {
     return retrieveAttachment(pointer, destination, maxSizeBytes, null);
   }
 
-  public SignalServiceProfile retrieveProfile(SignalServiceAddress address, Optional<UnidentifiedAccess> unidentifiedAccess)
-    throws IOException
-  {
-    return socket.retrieveProfile(address, unidentifiedAccess);
-  }
-
-  public InputStream retrieveProfileAvatar(String path, File destination, byte[] profileKey, int maxSizeBytes)
-    throws IOException
+  public InputStream retrieveProfileAvatar(String path, File destination, ProfileKey profileKey, long maxSizeBytes)
+      throws IOException
   {
     socket.retrieveProfileAvatar(path, destination, maxSizeBytes);
     return new ProfileCipherInputStream(new FileInputStream(destination), profileKey);
+  }
+
+  public FileInputStream retrieveGroupsV2ProfileAvatar(String path, File destination, long maxSizeBytes)
+      throws IOException
+  {
+    socket.retrieveProfileAvatar(path, destination, maxSizeBytes);
+    return new FileInputStream(destination);
   }
 
   /**
@@ -128,20 +125,20 @@ public class SignalServiceMessageReceiver {
    *
    * @param pointer The {@link SignalServiceAttachmentPointer}
    *                received in a {@link SignalServiceDataMessage}.
-   * @param destination The download destination for this attachment.
+   * @param destination The download destination for this attachment. If this file exists, it is
+   *                    assumed that this is previously-downloaded content that can be resumed.
    * @param listener An optional listener (may be null) to receive callbacks on download progress.
    *
    * @return An InputStream that streams the plaintext attachment contents.
    * @throws IOException
    * @throws InvalidMessageException
    */
-  public InputStream retrieveAttachment(SignalServiceAttachmentPointer pointer, File destination, int maxSizeBytes, ProgressListener listener)
-      throws IOException, InvalidMessageException
-  {
+  public InputStream retrieveAttachment(SignalServiceAttachmentPointer pointer, File destination, long maxSizeBytes, ProgressListener listener)
+      throws IOException, InvalidMessageException, MissingConfigurationException {
     if (!pointer.getDigest().isPresent()) throw new InvalidMessageException("No attachment digest!");
 
-    socket.retrieveAttachment(pointer.getId(), destination, maxSizeBytes, listener);
-    return AttachmentCipherInputStream.createForAttachment(destination, pointer.getSize().or(0), pointer.getKey(), pointer.getDigest().get());
+    socket.retrieveAttachment(pointer.getCdnNumber(), pointer.getRemoteId(), destination, maxSizeBytes, listener);
+    return AttachmentCipherInputStream.createForAttachment(destination, pointer.getSize().orElse(0), pointer.getKey(), pointer.getDigest().get());
   }
 
   public InputStream retrieveSticker(byte[] packId, byte[] packKey, int stickerId)
@@ -164,7 +161,6 @@ public class SignalServiceMessageReceiver {
       throws IOException, InvalidMessageException
   {
     byte[] manifestBytes = socket.retrieveStickerManifest(packId);
-
     InputStream           cipherStream = AttachmentCipherInputStream.createForStickerData(manifestBytes, packKey);
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -172,87 +168,63 @@ public class SignalServiceMessageReceiver {
 
     StickerProtos.Pack                             pack     = StickerProtos.Pack.parseFrom(outputStream.toByteArray());
     List<SignalServiceStickerManifest.StickerInfo> stickers = new ArrayList<>(pack.getStickersCount());
-    SignalServiceStickerManifest.StickerInfo       cover    = pack.hasCover() ? new SignalServiceStickerManifest.StickerInfo(pack.getCover().getId(), pack.getCover().getEmoji())
+    SignalServiceStickerManifest.StickerInfo       cover    = pack.hasCover() ? new SignalServiceStickerManifest.StickerInfo(pack.getCover().getId(), pack.getCover().getEmoji(), pack.getCover().getContentType())
                                                                           : null;
 
     for (StickerProtos.Pack.Sticker sticker : pack.getStickersList()) {
-      stickers.add(new SignalServiceStickerManifest.StickerInfo(sticker.getId(), sticker.getEmoji()));
+      stickers.add(new SignalServiceStickerManifest.StickerInfo(sticker.getId(), sticker.getEmoji(), sticker.getContentType()));
     }
 
     return new SignalServiceStickerManifest(pack.getTitle(), pack.getAuthor(), cover, stickers);
   }
 
   /**
-   * Creates a pipe for receiving SignalService messages.
+   * Creates a pipe for receiving SignalService messages.Callers must call {@link SignalServiceMessagePipe#shutdown()} when finished with the pipe.
    *
-   * Callers must call {@link SignalServiceMessagePipe#shutdown()} when finished with the pipe.
    *
+   * @param callback A callback function that will be invoked when the created pipeline is
+   * ready to be used by senders. Note that we can't use the <code>ConnectivityListener</code>
+   * here as that is an instance shared between the messagePipe and the unidentifiedMessagePipe.
+   * 
    * @return A SignalServiceMessagePipe for receiving Signal Service messages.
    */
-  public SignalServiceMessagePipe createMessagePipe() {
-    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
-                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
-                                                            Optional.of(credentialsProvider), userAgent, connectivityListener,
-                                                            sleepTimer);
-
-    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider));
-  }
-
-  public SignalServiceMessagePipe createUnidentifiedMessagePipe() {
-    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
-                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
-                                                            Optional.<CredentialsProvider>absent(), userAgent, connectivityListener,
-                                                            sleepTimer);
-
-    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider));
-  }
-
-  public List<SignalServiceEnvelope> retrieveMessages() throws IOException {
-    return retrieveMessages(new NullMessageReceivedCallback());
-  }
-
-  public List<SignalServiceEnvelope> retrieveMessages(MessageReceivedCallback callback)
-      throws IOException
-  {
-    List<SignalServiceEnvelope>       results  = new LinkedList<>();
-    List<SignalServiceEnvelopeEntity> entities = socket.getMessages();
-
-    for (SignalServiceEnvelopeEntity entity : entities) {
-      SignalServiceEnvelope envelope;
-
-      if (entity.hasSource() && entity.getSourceDevice() > 0) {
-        SignalServiceAddress address = new SignalServiceAddress(UuidUtil.parseOrNull(entity.getSourceUuid()), entity.getSourceE164());
-        envelope = new SignalServiceEnvelope(entity.getType(), Optional.of(address),
-                                             entity.getSourceDevice(), entity.getTimestamp(),
-                                             entity.getMessage(), entity.getContent(),
-                                             entity.getServerTimestamp(), entity.getServerUuid());
-      } else {
-        envelope = new SignalServiceEnvelope(entity.getType(), entity.getTimestamp(),
-                                             entity.getMessage(), entity.getContent(),
-                                             entity.getServerTimestamp(), entity.getServerUuid());
-      }
-
-      callback.onMessage(envelope);
-      results.add(envelope);
-
-      if (envelope.hasUuid()) socket.acknowledgeMessage(envelope.getUuid());
-      else                    socket.acknowledgeMessage(entity.getSourceE164(), entity.getTimestamp());
+    public NetworkClient createMessagePipe(Consumer callback) {
+        NetworkClient networkClient = NetworkClient.createNetworkClient(urls.getSignalServiceUrls()[0], Optional.of(credentialsProvider), signalAgent, Optional.of(connectivityListener), allowStories, useQuic);
+        callback.accept(networkClient);
+//                                                            Optional.of(credentialsProvider), signalAgent,  )
+//    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
+//                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
+//                                                            Optional.of(credentialsProvider), signalAgent, connectivityListener,
+//                                                            sleepTimer,
+////                                                            urls.getNetworkInterceptors(),
+////                                                            urls.getDns(),
+//                                                            urls.getSignalProxy(),
+//                                                            callback, allowStories);
+//
+        // return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
+        return networkClient;
     }
 
-    return results;
+  public NetworkClient createUnidentifiedMessagePipe(Consumer callback) {
+              NetworkClient networkClient = NetworkClient.createNetworkClient(urls.getSignalServiceUrls()[0], Optional.empty(), signalAgent, Optional.of(connectivityListener), allowStories, useQuic);
+        callback.accept(networkClient);
+              return networkClient;
+
+//
+//    WebSocketConnection webSocket = new WebSocketConnection(urls.getSignalServiceUrls()[0].getUrl(),
+//                                                            urls.getSignalServiceUrls()[0].getTrustStore(),
+//                                                            Optional.<CredentialsProvider>empty(), signalAgent, connectivityListener,
+//                                                            sleepTimer,
+////                                                            urls.getNetworkInterceptors(),
+////                                                            urls.getDns(),
+//                                                            urls.getSignalProxy(),
+//                                                            callback, allowStories);
+//
+//    return new SignalServiceMessagePipe(webSocket, Optional.of(credentialsProvider), clientZkProfileOperations);
   }
 
   public void setSoTimeoutMillis(long soTimeoutMillis) {
     socket.setSoTimeoutMillis(soTimeoutMillis);
-  }
-
-  public interface MessageReceivedCallback {
-    public void onMessage(SignalServiceEnvelope envelope);
-  }
-
-  public static class NullMessageReceivedCallback implements MessageReceivedCallback {
-    @Override
-    public void onMessage(SignalServiceEnvelope envelope) {}
   }
 
 }

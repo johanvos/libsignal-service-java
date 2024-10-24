@@ -13,6 +13,7 @@ public class OutgoingPushMessage {
 
   @JsonProperty
   private int    type;
+
   @JsonProperty
   private int    destinationDeviceId;
   @JsonProperty
@@ -30,4 +31,20 @@ public class OutgoingPushMessage {
     this.destinationRegistrationId = destinationRegistrationId;
     this.content                   = content;
   }
+  
+  public int getDestinationDeviceId() {
+    return destinationDeviceId;
+  }
+
+    public int getType() {
+        return type;
+    }
+
+    public int getDestinationRegistrationId() {
+        return destinationRegistrationId;
+    }
+
+    public String getContent() {
+        return content;
+    }
 }
