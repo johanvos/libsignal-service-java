@@ -336,7 +336,9 @@ public class PushServiceSocket {
     }
 
     public WhoAmIResponse getWhoAmI() throws IOException {
-        return JsonUtil.fromJson(makeServiceRequest(WHO_AM_I, "GET", null), WhoAmIResponse.class);
+        String response = makeServiceRequest(WHO_AM_I, "GET", null);
+        LOG.info("response = "+response);
+        return JsonUtil.fromJson(response, WhoAmIResponse.class);
     }
 
     public boolean isIdentifierRegistered(ServiceId identifier) throws IOException {
@@ -2115,6 +2117,7 @@ public class PushServiceSocket {
             if (credentialsProvider.getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID) {
                 identifier += "." + credentialsProvider.getDeviceId();
             }
+            LOG.info("idenfitier = "+identifier+" and pwdsize = "+credentialsProvider.getPassword().length());
             return "Basic " + Base64.encodeBytes((identifier + ":" + credentialsProvider.getPassword()).getBytes("UTF-8"));
         } catch (UnsupportedEncodingException e) {
             throw new AssertionError(e);

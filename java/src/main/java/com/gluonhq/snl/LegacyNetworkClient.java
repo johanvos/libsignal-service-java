@@ -106,8 +106,9 @@ public class LegacyNetworkClient extends NetworkClient {
     protected CompletableFuture<Response> implAsyncSendRequest(HttpRequest request, byte[] raw) throws IOException {
         CompletableFuture<Response> response;
         LOG.info("Send request, not using kwik with method "+request.method()+" and address = "+request.uri());
+        LOG.info("Headers = "+request.headers()+" for url = "+request.uri());
         response = CompletableFuture.completedFuture(getDirectResponse(request));
-        LOG.info("Got response, not using kwik");
+        LOG.info("Got response, not using kwik: "+response);
         return response;
     }
 
@@ -123,7 +124,7 @@ public class LegacyNetworkClient extends NetworkClient {
             LOG.info("Invoke send on httpClient " + this.httpClient);
 //            LOG.info("RequestBody = "+request.method()+" to "+request.bodyPublisher()+ " and headers = "+request.headers().map());
             httpResponse = this.httpClient.send(request, createBodyHandler(request));
-            LOG.info("Did invoke send on httpClient");
+            LOG.info("Did invoke send on httpClient, response = "+httpResponse);
         } catch (InterruptedException ex) {
             LOG.log(Level.SEVERE, "Error sending using httpClient " + this.httpClient, ex);
             throw new IOException(ex);
@@ -178,8 +179,10 @@ public class LegacyNetworkClient extends NetworkClient {
         } else {
             request.method(method, BodyPublishers.ofByteArray(body));
         }
-        for (Map.Entry<String, List<String>> header : headers.entrySet()) {
-            request.header(header.getKey(), header.getValue().get(0));
+        if (headers != null) {
+            for (Map.Entry<String, List<String>> header : headers.entrySet()) {
+                request.header(header.getKey(), header.getValue().get(0));
+            }
         }
         return implAsyncSendRequest(request.build(), body);
     }

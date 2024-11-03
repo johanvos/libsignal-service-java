@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -288,6 +289,14 @@ public class NetworkAPI {
         }
     }
 
+    public String registerCapabilities(Map<String, Boolean> cap) {
+        try {
+            URI uri = new URI("https://" + host + "/v1/devices/capabilities/");
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        throw new RuntimeException("Not yet implemented!");
+    }
     /**
      * For testing only!
      * The device that wants to be linked generates a URL that should be scanned
@@ -308,6 +317,10 @@ public class NetworkAPI {
         }
     }
 
+    public Response sendRequest(HttpRequest request, byte[] payload) throws IOException {
+        Response response = getClient().sendRequest(request, payload);
+        return response;
+    }
     // === BACKUP ===
     public boolean enableBackup(String context) throws NonSuccessfulResponseCodeException {
         LOG.info("Enabling backup...");
@@ -473,6 +486,7 @@ public class NetworkAPI {
             if (credentialsProvider.getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID) {
                 identifier += "." + credentialsProvider.getDeviceId();
             }
+            LOG.info("identifier = "+identifier+" and pw = "+credentialsProvider.getPassword());
             return "Basic " + Base64.encodeBytes((identifier + ":" + credentialsProvider.getPassword()).getBytes("UTF-8"));
         } catch (UnsupportedEncodingException e) {
             throw new AssertionError(e);
