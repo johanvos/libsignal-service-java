@@ -105,10 +105,10 @@ public class LegacyNetworkClient extends NetworkClient {
     @Override
     protected CompletableFuture<Response> implAsyncSendRequest(HttpRequest request, byte[] raw) throws IOException {
         CompletableFuture<Response> response;
-        LOG.info("Send request, not using kwik with method "+request.method()+" and address = "+request.uri());
-        LOG.info("Headers = "+request.headers()+" for url = "+request.uri());
+        LOG.finer("Send request, not using kwik with method "+request.method()+" and address = "+request.uri());
+        LOG.finer("Headers = "+request.headers()+" for url = "+request.uri());
         response = CompletableFuture.completedFuture(getDirectResponse(request));
-        LOG.info("Got response, not using kwik: "+response);
+        LOG.finer("Got response, not using kwik: "+response);
         return response;
     }
 
