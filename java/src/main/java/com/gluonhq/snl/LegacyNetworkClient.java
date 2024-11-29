@@ -122,9 +122,11 @@ public class LegacyNetworkClient extends NetworkClient {
         HttpResponse httpResponse;
         try {
             LOG.info("Invoke send on httpClient " + this.httpClient);
-//            LOG.info("RequestBody = "+request.method()+" to "+request.bodyPublisher()+ " and headers = "+request.headers().map());
+            LOG.fine("RequestBody = "+request.method()+" to "+request.bodyPublisher()+ " and headers = "+request.headers().map());
             httpResponse = this.httpClient.send(request, createBodyHandler(request));
+            LOG.fine("Response headers = " + httpResponse.headers());
             LOG.info("Did invoke send on httpClient, response = "+httpResponse);
+            LOG.finer("Statuscode = "+httpResponse.statusCode()+" and body = "+httpResponse.body());
         } catch (InterruptedException ex) {
             LOG.log(Level.SEVERE, "Error sending using httpClient " + this.httpClient, ex);
             throw new IOException(ex);

@@ -106,6 +106,7 @@ public abstract class NetworkClient {
 
     public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String agent,
             Optional<ConnectivityListener> cl, boolean allowStories, boolean useQuic) {
+
         LOG.info("Creating Networkclient with url " + (url != null ? url.getUrl() : "NULL") + ", using quic? " + useQuic);
         if (useQuic) {
             return new QuicNetworkClient(url, cp, agent, cl, allowStories);
@@ -532,6 +533,7 @@ public abstract class NetworkClient {
     private Response validateResponse(URI uri, Response response) {
         try {
             int statusCode = response.getStatusCode();
+            LOG.fine("validate response with statuscode "+statusCode);
             switch (statusCode) {
                 case 409:
                     if (uri.getHost().indexOf("storage") > -1) {

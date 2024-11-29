@@ -125,7 +125,7 @@ public final class SignalGroupV2Record implements SignalRecord {
    }
 
 
-  GroupV2Record toProto() {
+  public GroupV2Record toProto() {
     return proto;
   }
 
