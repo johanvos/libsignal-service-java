@@ -96,20 +96,30 @@ public abstract class NetworkClient {
     private static final String SERVER_DELIVERED_TIMESTAMP_HEADER = "X-Signal-Timestamp";
     private boolean websocketCreated = false;
     
-    public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, boolean useQuic) {
-        return createNetworkClient(url, cp, null, Optional.empty(), false, useQuic);
+    
+    public static NetworkClient createNetworkClient(SignalUrl url, String agent, boolean allowStories, boolean useQuic) {
+        return createNetworkClient(url, Optional.empty(), agent, Optional.empty(), allowStories, useQuic, null);
     }
 
-    public static NetworkClient createNetworkClient(SignalUrl url, String agent, boolean allowStories, boolean useQuic) {
-        return createNetworkClient(url, Optional.empty(), agent, Optional.empty(), allowStories, useQuic);
+    public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, boolean useQuic, String proxy) {
+        return createNetworkClient(url, cp, null, Optional.empty(), false, useQuic, proxy);
+    }
+
+    public static NetworkClient createNetworkClient(SignalUrl url, String agent, boolean allowStories, boolean useQuic, String proxy) {
+        return createNetworkClient(url, Optional.empty(), agent, Optional.empty(), allowStories, useQuic, proxy);
     }
 
     public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String agent,
             Optional<ConnectivityListener> cl, boolean allowStories, boolean useQuic) {
+        return createNetworkClient(url, cp, agent, cl, allowStories, useQuic, null);
+    }
+
+    public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String agent,
+            Optional<ConnectivityListener> cl, boolean allowStories, boolean useQuic, String proxy) {
 
         LOG.info("Creating Networkclient with url " + (url != null ? url.getUrl() : "NULL") + ", using quic? " + useQuic);
         if (useQuic) {
-            return new QuicNetworkClient(url, cp, agent, cl, allowStories);
+            return new QuicNetworkClient(url, cp, agent, cl, allowStories, proxy);
         } else {
             return new LegacyNetworkClient(url, cp, agent, cl, allowStories);
         }

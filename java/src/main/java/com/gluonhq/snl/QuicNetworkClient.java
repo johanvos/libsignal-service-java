@@ -44,15 +44,24 @@ public class QuicNetworkClient extends NetworkClient {
     LegacyNetworkClient fallback;
 
 
-    public QuicNetworkClient(SignalUrl url, String agent, boolean allowStories) {
-        this(url, Optional.empty(), agent, Optional.empty(), allowStories);
+    public QuicNetworkClient(SignalUrl url, String agent, boolean allowStories, String proxy) {
+        this(url, Optional.empty(), agent, Optional.empty(), allowStories, proxy);
     }
 
-    public QuicNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String signalAgent, Optional<ConnectivityListener> connectivityListener, boolean allowStories) {
+    /**
+     * A QuickNetworkClient always needs a proxy, as the Signal Server doesn't accept Quic.
+     * @param url
+     * @param cp
+     * @param signalAgent
+     * @param connectivityListener
+     * @param allowStories
+     * @param proxy 
+     */
+    public QuicNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String signalAgent, Optional<ConnectivityListener> connectivityListener, boolean allowStories, String proxy) {
         super(url, cp, signalAgent, connectivityListener, allowStories);
         this.fallback = new LegacyNetworkClient(url, cp, signalAgent, connectivityListener, allowStories);
         URI uri = null;
-        this.kwikAddress = System.getProperty("wave.kwikhost", "swave://grpcproxy.gluonhq.net:7444");
+        this.kwikAddress = proxy; // System.getProperty("wave.kwikhost", "swave://grpcproxy.gluonhq.net:7444");
         LOG.info("Created quicnetworkclient with address "+kwikAddress);
         try {
             uri = new URI(kwikAddress);

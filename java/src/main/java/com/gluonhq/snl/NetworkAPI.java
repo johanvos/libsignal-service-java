@@ -58,6 +58,7 @@ public class NetworkAPI {
     private String endpointUri;
     private boolean local = false;
     private boolean useQuic;
+    private final String proxy;
 
     private NetworkClient networkClient;
     private static final Logger LOG = Logger.getLogger(NetworkAPI.class.getName());
@@ -67,13 +68,18 @@ public class NetworkAPI {
     }
 
     public NetworkAPI(URI endpoint, Optional<CredentialsProvider> cp, boolean useQuic) {
+        this (endpoint, cp, useQuic, null);
+    }
+
+    public NetworkAPI(URI endpoint, Optional<CredentialsProvider> cp, boolean useQuic, String proxy) {
+        this.proxy = proxy;
         if (endpoint != null) {
             this.host = endpoint.getHost();
             this.scheme = endpoint.getScheme();
             this.port = endpoint.getPort();
             LOG.info("Got endpoint, host = "+host+" and scheme = "+scheme);
         }
-        LOG.info("Creating new NetworkAPI with host "+host);
+        LOG.info("Creating new NetworkAPI with host "+host+" and proxy = "+proxy);
         if (host.startsWith("localhost")) {
             local = true;
         }
@@ -92,7 +98,7 @@ public class NetworkAPI {
 
     private NetworkClient getClient() {
         if (networkClient == null) {
-            networkClient = NetworkClient.createNetworkClient(signalUrl, cp, useQuic);
+            networkClient = NetworkClient.createNetworkClient(signalUrl, cp, useQuic, proxy);
         }
         return networkClient;
     }
@@ -150,6 +156,7 @@ public class NetworkAPI {
                 return answer;
             }
             byte[] raw = response.body().bytes();
+            LOG.info("RemoteConfig got "+raw.length+" bytes");
             UserRemoteConfigListMessage urlm = UserRemoteConfigListMessage.parseFrom(raw);
             for (UserRemoteConfigMessage urcm : urlm.getUserRemoteConfigList()) {
                 answer.put(urcm.getName(), urcm.hasValue() ? urcm.getValue() : urcm.getEnabled());
