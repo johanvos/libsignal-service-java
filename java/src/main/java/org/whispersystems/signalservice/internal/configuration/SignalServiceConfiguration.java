@@ -18,6 +18,7 @@ public final class SignalServiceConfiguration {
 //  private final Optional<Dns>                dns;
   private final Optional<SignalProxy>        proxy;
   private final byte[]                       zkGroupServerPublicParams;
+  private final boolean useQuic;
 
   public SignalServiceConfiguration(SignalServiceUrl[] signalServiceUrls,
                                     Map<Integer, SignalCdnUrl[]> signalCdnUrlMap,
@@ -27,7 +28,7 @@ public final class SignalServiceConfiguration {
 //                                    List<Interceptor> networkInterceptors,
 //                                    Optional<Dns> dns,
                                     Optional<SignalProxy> proxy,
-                                    byte[] zkGroupServerPublicParams)
+                                    byte[] zkGroupServerPublicParams, boolean useQuic)
   {
     this.signalServiceUrls          = signalServiceUrls;
     this.signalCdnUrlMap            = signalCdnUrlMap;
@@ -38,6 +39,7 @@ public final class SignalServiceConfiguration {
 //    this.dns                        = dns;
     this.proxy                      = proxy;
     this.zkGroupServerPublicParams  = zkGroupServerPublicParams;
+    this.useQuic = useQuic;
   }
 
   public SignalServiceUrl[] getSignalServiceUrls() {
@@ -58,6 +60,10 @@ public final class SignalServiceConfiguration {
 
   public SignalStorageUrl[] getSignalStorageUrls() {
     return signalStorageUrls;
+  }
+  
+  public boolean isUseQuic() {
+      return this.useQuic;
   }
 //
 //  public List<Interceptor> getNetworkInterceptors() {

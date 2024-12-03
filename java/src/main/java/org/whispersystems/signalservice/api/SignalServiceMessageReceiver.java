@@ -76,13 +76,12 @@ public class SignalServiceMessageReceiver {
                                       ConnectivityListener listener,
                                       SleepTimer timer,
                                       ClientZkProfileOperations clientZkProfileOperations,
-                                      boolean automaticNetworkRetry, boolean allowStories,
-                                      boolean useQuic)
+                                      boolean automaticNetworkRetry, boolean allowStories)
   {
     this.urls                      = urls;
     this.credentialsProvider       = credentials;
-    this.useQuic = useQuic;
-    this.socket                    = new PushServiceSocket(urls, credentials, signalAgent, clientZkProfileOperations, automaticNetworkRetry, useQuic);
+    this.useQuic = urls.isUseQuic();
+    this.socket                    = new PushServiceSocket(urls, credentials, signalAgent, clientZkProfileOperations, automaticNetworkRetry);
     this.signalAgent               = signalAgent;
     this.connectivityListener      = listener;
     this.sleepTimer                = timer;

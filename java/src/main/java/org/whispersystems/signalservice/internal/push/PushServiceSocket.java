@@ -285,8 +285,7 @@ public class PushServiceSocket {
             CredentialsProvider credentialsProvider,
             String signalAgent,
             ClientZkProfileOperations clientZkProfileOperations,
-            boolean automaticNetworkRetry,
-            boolean useQuic) {
+            boolean automaticNetworkRetry) {
         this.credentialsProvider = credentialsProvider;
         this.signalAgent = signalAgent;
         this.automaticNetworkRetry = automaticNetworkRetry;
@@ -308,7 +307,7 @@ public class PushServiceSocket {
             LOG.info("grpc target for grpcClient = " + target);
             grpcClient = new GrpcClient(target);
         }
-        this.useQuic = useQuic;
+        this.useQuic = configuration.isUseQuic();
     }
 
     public void requestSmsVerificationCode(boolean androidSmsRetriever, Optional<String> captchaToken, Optional<String> challenge) throws IOException {

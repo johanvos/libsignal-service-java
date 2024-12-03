@@ -53,7 +53,7 @@ public class QuicNetworkClient extends NetworkClient {
         this.fallback = new LegacyNetworkClient(url, cp, signalAgent, connectivityListener, allowStories);
         URI uri = null;
         this.kwikAddress = System.getProperty("wave.kwikhost", "swave://grpcproxy.gluonhq.net:7444");
-
+        LOG.info("Created quicnetworkclient with address "+kwikAddress);
         try {
             uri = new URI(kwikAddress);
         } catch (URISyntaxException ex) {

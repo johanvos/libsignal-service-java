@@ -169,7 +169,7 @@ public class SignalServiceAccountManager {
                                      boolean useQuic)
   {
     this.groupsV2Operations = groupsV2Operations;
-    this.pushServiceSocket  = new PushServiceSocket(configuration, credentialsProvider, signalAgent, groupsV2Operations.getProfileOperations(), automaticNetworkRetry, useQuic);
+    this.pushServiceSocket  = new PushServiceSocket(configuration, credentialsProvider, signalAgent, groupsV2Operations.getProfileOperations(), automaticNetworkRetry);
     this.credentials        = credentialsProvider;
     this.networkAPI = networkAPI;
     this.userAgent          = signalAgent;
