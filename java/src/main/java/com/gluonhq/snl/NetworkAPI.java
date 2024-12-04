@@ -50,9 +50,10 @@ import org.whispersystems.util.Base64;
  */
 public class NetworkAPI {
 
+    static final String DEFAULT_HOST="chat.signal.org";
+
     private Optional<CredentialsProvider> cp;
     private final SignalUrl signalUrl = null;
-    private String host = "chat.signal.org";
     private String scheme = "https";
     private int port = -1;
     private String endpointUri;
@@ -73,8 +74,9 @@ public class NetworkAPI {
 
     public NetworkAPI(URI endpoint, Optional<CredentialsProvider> cp, boolean useQuic, String proxy) {
         this.proxy = proxy;
+        String host = DEFAULT_HOST;
         if (endpoint != null) {
-            this.host = endpoint.getHost();
+            host = endpoint.getHost();
             this.scheme = endpoint.getScheme();
             this.port = endpoint.getPort();
             LOG.info("Got endpoint, host = "+host+" and scheme = "+scheme);
@@ -169,7 +171,7 @@ public class NetworkAPI {
 
     public String reserveUsername(List<Username> usernames) {
         try {
-            URI uri = new URI("https://" + host + "/v1/accounts/username_hash/reserve");
+            URI uri = new URI(endpointUri+ "/v1/accounts/username_hash/reserve");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             headers.put("content-type", List.of("application/json"));
@@ -201,7 +203,7 @@ public class NetworkAPI {
      */
     public String confirmUsername(String hash, String proof, String link) {
         try {
-            URI uri = new URI("https://" + host + "/v1/accounts/username_hash/confirm");
+            URI uri = new URI(endpointUri + "/v1/accounts/username_hash/confirm");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             headers.put("content-type", List.of("application/json"));
@@ -224,7 +226,7 @@ public class NetworkAPI {
      */
     public String getAciByUsernameHash(String hash) {
         try {
-            URI uri = new URI("https://" + host + "/v1/accounts/username_hash/" + hash);
+            URI uri = new URI(endpointUri + "/v1/accounts/username_hash/" + hash);
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("content-type", List.of("application/json"));
 
@@ -247,7 +249,7 @@ public class NetworkAPI {
 
     public PreKeyResponse getPreKey(String uuid, int deviceId) throws IOException {
         try {
-            URI uri = new URI("xhttps://"+host+"/v2/keys/" + uuid + "/" + deviceId);
+            URI uri = new URI(endpointUri+"/v2/keys/" + uuid + "/" + deviceId);
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
@@ -290,7 +292,7 @@ public class NetworkAPI {
             throws IOException {
         try {
             long todayPlus7 = todaySeconds + TimeUnit.DAYS.toSeconds(7);
-            URI uri = new URI("xhttps://"+host+"/v1/certificate/auth/group?redemptionStartSeconds=" + todaySeconds + "&redemptionEndSeconds=" + todayPlus7);
+            URI uri = new URI(endpointUri+"/v1/certificate/auth/group?redemptionStartSeconds=" + todaySeconds + "&redemptionEndSeconds=" + todayPlus7);
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
@@ -315,7 +317,7 @@ public class NetworkAPI {
 
     public String registerCapabilities(Map<String, Boolean> cap) {
         try {
-            URI uri = new URI("https://" + host + "/v1/devices/capabilities/");
+            URI uri = new URI(endpointUri + "/v1/devices/capabilities/");
         } catch (URISyntaxException ex) {
             Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -332,8 +334,8 @@ public class NetworkAPI {
      */
     public void sendProvisionUrl(String url) throws IOException {
         try {
-            URI uri = new URI("http://"+host+"/v1/main/provisionurl/" + url);
-            LOG.info("Send provisioning url with host " + host+" to "+url);
+            URI uri = new URI(endpointUri+"/v1/main/provisionurl/" + url);
+            LOG.info("Send provisioning url with host " + endpointUri+" to "+url);
             Map<String, List<String>> headers = new HashMap<>();
             Response response = getClient().sendRequest(uri, "GET", new byte[0], headers);
         } catch (URISyntaxException ex) {
@@ -350,7 +352,7 @@ public class NetworkAPI {
         LOG.info("Enabling backup...");
         int statusCode = 0;
         try {
-            URI uri = new URI("https://" + host + "/v1/archives/backupid");
+            URI uri = new URI(endpointUri+ "/v1/archives/backupid");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cp.get())));
             headers.put("content-type", List.of("application/json"));
@@ -371,7 +373,7 @@ public class NetworkAPI {
     public String getBackupAuthCredentials(long startSeconds, long endSeconds) throws NonSuccessfulResponseCodeException {
         int statusCode = 0;
         try {
-            URI uri = new URI("https://" + host + "/v1/archives/auth?redemptionStartSeconds="
+            URI uri = new URI(endpointUri + "/v1/archives/auth?redemptionStartSeconds="
                     +startSeconds+"&redemptionEndSeconds="+endSeconds);
             LOG.info("get backup authcredenials from/to with uri = "+uri);
             Map<String, List<String>> headers = new HashMap<>();
@@ -393,7 +395,7 @@ public class NetworkAPI {
     public String getArchive(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + host + "/v1/archives");
+            URI uri = new URI(endpointUri + "/v1/archives");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
@@ -415,7 +417,7 @@ public class NetworkAPI {
     public boolean setArchivePublicKey(ECPublicKey publicKey, ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + host + "/v1/archives/keys");
+            URI uri = new URI(endpointUri + "/v1/archives/keys");
             String key = Base64.encodeBytes(publicKey.serialize());
             String body = "{\"backupIdPublicKey\": \"" + key + "\"}";
             LOG.info("SEND BODY: " + body);
@@ -434,7 +436,7 @@ public class NetworkAPI {
     public String getArchiveMessageBackupUploadForm(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + host + "/v1/archives/upload/form");
+            URI uri = new URI(endpointUri + "/v1/archives/upload/form");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
@@ -448,7 +450,7 @@ public class NetworkAPI {
     public String getReadCredentials(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + host + "/v1/archives/auth/read?cdn=3");
+            URI uri = new URI(endpointUri + "/v1/archives/auth/read?cdn=3");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException | IOException ex) {
             LOG.log(Level.SEVERE, null, ex);
@@ -463,7 +465,7 @@ public class NetworkAPI {
     public String listMedia(ArchiveCredentialPresentation credentials) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + host + "/v1/archives/media");
+            URI uri = new URI(endpointUri + "/v1/archives/media");
             response = getClient().sendRequest(uri, "GET", new byte[0], createZKHeaders(credentials));
         } catch (URISyntaxException| IOException  ex) {
             LOG.log(Level.SEVERE, null, ex);
@@ -478,7 +480,7 @@ public class NetworkAPI {
     public String copyAttachmentMedia(ArchiveCredentialPresentation credentials, CopyMediaRequest copyMediaRequest) throws NonSuccessfulResponseCodeException {
         Response response = null;
         try {
-            URI uri = new URI("https://" + host + "/v1/archives/media");
+            URI uri = new URI(endpointUri+ "/v1/archives/media");
             ObjectMapper mapper = new ObjectMapper();
             String payload = mapper.writeValueAsString(copyMediaRequest);
             LOG.info("request to copy/archive attachment with payload "+payload);
