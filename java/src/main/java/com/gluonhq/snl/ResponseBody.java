@@ -1,5 +1,8 @@
 package com.gluonhq.snl;
 
+import java.util.Arrays;
+import java.util.logging.Logger;
+
 /**
  *
  * @author johan
@@ -8,12 +11,17 @@ public class ResponseBody<T> {
 
     T body;
     
+    private static final Logger LOG = Logger.getLogger(ResponseBody.class.getName());
+
     public ResponseBody(T t) {
         this.body = t;
+        LOG.finer("Created Responsebody with type "+body.getClass());
     }
 
     public String string() {
-        if (body instanceof String bs) return bs;
+        if (body instanceof String bs) {
+            return bs;
+        }
         if (body instanceof byte[] rb) return new String(rb);
         throw new IllegalArgumentException ("Can't convert "+body+" to string");
     }

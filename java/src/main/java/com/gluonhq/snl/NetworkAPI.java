@@ -15,6 +15,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpRequest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,29 +53,52 @@ public class NetworkAPI {
     private Optional<CredentialsProvider> cp;
     private final SignalUrl signalUrl = null;
     private String host = "chat.signal.org";
+    private String scheme = "https";
+    private int port = -1;
+    private String endpointUri;
     private boolean local = false;
     private boolean useQuic;
+    private final String proxy;
 
     private NetworkClient networkClient;
     private static final Logger LOG = Logger.getLogger(NetworkAPI.class.getName());
 
     public NetworkAPI(Optional<CredentialsProvider> cp, boolean useQuic) {
-        this("chat.signal.org", cp, useQuic);
+        this(null, cp, useQuic);
     }
 
-    public NetworkAPI(String host, Optional<CredentialsProvider> cp, boolean useQuic) {
-        LOG.info("Creating new NetworkAPI with host "+host);
-        this.host = host;
+    public NetworkAPI(URI endpoint, Optional<CredentialsProvider> cp, boolean useQuic) {
+        this (endpoint, cp, useQuic, null);
+    }
+
+    public NetworkAPI(URI endpoint, Optional<CredentialsProvider> cp, boolean useQuic, String proxy) {
+        this.proxy = proxy;
+        if (endpoint != null) {
+            this.host = endpoint.getHost();
+            this.scheme = endpoint.getScheme();
+            this.port = endpoint.getPort();
+            LOG.info("Got endpoint, host = "+host+" and scheme = "+scheme);
+        }
+        LOG.info("Creating new NetworkAPI with host "+host+" and proxy = "+proxy);
         if (host.startsWith("localhost")) {
             local = true;
         }
         this.cp = cp;
         this.useQuic = useQuic;
+        this.endpointUri = "x"+scheme+"://"+ host;
+        if (this.port > 0) {
+            this.endpointUri = this.endpointUri+":"+port;
+        }
+        LOG.info("Created endpointuri "+this.endpointUri);
+    }
+
+    public String getServerAddress() {
+        return this.endpointUri.substring(1);
     }
 
     private NetworkClient getClient() {
         if (networkClient == null) {
-            networkClient = NetworkClient.createNetworkClient(signalUrl, cp, useQuic);
+            networkClient = NetworkClient.createNetworkClient(signalUrl, cp, useQuic, proxy);
         }
         return networkClient;
     }
@@ -89,10 +113,7 @@ public class NetworkAPI {
      */
     public byte[] getSenderCertificate(CredentialsProvider cred) throws IOException {
         try {
-            URI uri = new URI("xhttps://"+host+"/v1/certificate/delivery");
-            if (local) {
-                uri = new URI("xhttp://"+host+"/v1/certificate/delivery");
-            }
+            URI uri = new URI(endpointUri+"/v1/certificate/delivery");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
             NetworkClient client = getClient();
@@ -101,10 +122,12 @@ public class NetworkAPI {
                 throw new AuthorizationFailedException(response.getStatusCode(), "Got a 401 code from server when asking sendercertifcate");
             }
             if (client.supportsJson()) {
+                LOG.fine("Got a json response, length = " + response.body().contentLength());         
                 ObjectMapper objectMapper = new ObjectMapper();
                 SenderCertificate cert = objectMapper.readValue(response.body().string(), SenderCertificate.class);
                 return cert.getCertificate();
             }
+            LOG.fine("Got our bytes immediately, no json conversion");
             byte[] raw = response.body().bytes();
             return raw;
         } catch (URISyntaxException ex) {
@@ -116,7 +139,7 @@ public class NetworkAPI {
     public Map<String, Object> getRemoteConfig(CredentialsProvider cred) throws IOException {
         try {
             Map<String, Object> answer = new HashMap<>();
-            URI uri = new URI("xhttps://"+host+"/v1/config");
+            URI uri = new URI(endpointUri+"/v1/config");
             Map<String, List<String>> headers = new HashMap<>();
             headers.put("Authorization", List.of(getAuthorizationHeader(cred)));
             NetworkClient client = getClient();
@@ -132,6 +155,7 @@ public class NetworkAPI {
                 return answer;
             }
             byte[] raw = response.body().bytes();
+            LOG.info("RemoteConfig got "+raw.length+" bytes");
             UserRemoteConfigListMessage urlm = UserRemoteConfigListMessage.parseFrom(raw);
             for (UserRemoteConfigMessage urcm : urlm.getUserRemoteConfigList()) {
                 answer.put(urcm.getName(), urcm.hasValue() ? urcm.getValue() : urcm.getEnabled());
