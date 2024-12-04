@@ -122,13 +122,12 @@ public class NetworkAPI {
                 throw new AuthorizationFailedException(response.getStatusCode(), "Got a 401 code from server when asking sendercertifcate");
             }
             if (client.supportsJson()) {
-                System.err.println("RESPONSE len = "+response.body().contentLength());
-                System.err.println("bytes = "+Arrays.toString(response.body().bytes()));
-                System.err.println("byte2 = "+response.body().string());
+                LOG.fine("Got a json response, length = " + response.body().contentLength());         
                 ObjectMapper objectMapper = new ObjectMapper();
                 SenderCertificate cert = objectMapper.readValue(response.body().string(), SenderCertificate.class);
                 return cert.getCertificate();
             }
+            LOG.fine("Got our bytes immediately, no json conversion");
             byte[] raw = response.body().bytes();
             return raw;
         } catch (URISyntaxException ex) {

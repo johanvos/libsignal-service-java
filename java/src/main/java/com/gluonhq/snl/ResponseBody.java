@@ -15,17 +15,11 @@ public class ResponseBody<T> {
 
     public ResponseBody(T t) {
         this.body = t;
-       // Thread.dumpStack();
-        LOG.info("Created Responsebody with type "+body.getClass()+" and content = "+body);
-        if (body instanceof String bodyString) {
-            LOG.info("And bodybytes = "+Arrays.toString(bodyString.getBytes()));
-        }
+        LOG.finer("Created Responsebody with type "+body.getClass());
     }
 
     public String string() {
-        LOG.info("RESPONSEBODY, class = "+body.getClass());
         if (body instanceof String bs) {
-            LOG.info("will return this string: "+bs+" with bytes "+Arrays.toString(bs.getBytes()));
             return bs;
         }
         if (body instanceof byte[] rb) return new String(rb);
@@ -33,7 +27,6 @@ public class ResponseBody<T> {
     }
 
     public byte[] bytes() {
-        LOG.info("RESPONSEBODY, class = "+ body.getClass());
         if (body instanceof String bodyString) return bodyString.getBytes();
         if (body == null) return new byte[0];
         return (byte[]) body;
