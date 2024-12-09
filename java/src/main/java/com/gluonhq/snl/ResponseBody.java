@@ -15,7 +15,6 @@ public class ResponseBody<T> {
 
     public ResponseBody(T t) {
         this.body = t;
-        LOG.finer("Created Responsebody with type "+body.getClass());
     }
 
     public String string() {
