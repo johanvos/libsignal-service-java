@@ -2109,7 +2109,8 @@ public class PushServiceSocket {
     private NetworkClient createConnectionClient(SignalUrl url, Optional<SignalProxy> proxy) {
         String proxyHost = null;
         if (proxy.isPresent()) {
-            proxyHost = proxy.get().getHost();
+            SignalProxy p = proxy.get();
+            proxyHost = "http://"+p.getHost()+":"+p.getPort();
         }
         return NetworkClient.createNetworkClient(url, "FOO", true, useQuic, proxyHost);
     }
