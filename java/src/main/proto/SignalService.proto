@@ -323,6 +323,19 @@ message DataMessage {
     required string identifier = 4;
   }
 
+  enum ProxyOperation {
+    ADD = 0;
+    REMOVE = 1;
+  }
+
+  message ProxyMessage {
+    required ProxyOperation op = 1;
+    required string host = 2;
+    required uint32 port = 3;
+    required uint64 identifier = 4;
+    required uint32 remoteId = 5;
+  }
+
   enum ProtocolVersion {
     option allow_alias = true;
 
@@ -360,6 +373,7 @@ message DataMessage {
   optional StoryContext       storyContext            = 21;
   optional GiftBadge          giftBadge               = 22;
   optional CanvasMessage      canvasMessage           = 101;
+  optional ProxyMessage       proxyMessage            = 102;
 }
 
 message NullMessage {

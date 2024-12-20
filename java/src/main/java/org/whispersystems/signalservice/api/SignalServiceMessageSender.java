@@ -1207,6 +1207,9 @@ public class SignalServiceMessageSender {
         if (message.getCanvasMessage().isPresent()) {
             builder.setCanvasMessage(message.getCanvasMessage().get());
         }
+        if (message.getProxyMessage().isPresent()) {
+            builder.setProxyMessage(message.getProxyMessage().get());
+        }
         builder.setTimestamp(message.getTimestamp());
         return builder;
     }

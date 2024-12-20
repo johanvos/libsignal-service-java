@@ -19,6 +19,7 @@ import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.BodyRange;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.DataMessage.CanvasMessage;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos.DataMessage.ProxyMessage;
 
 /**
  * Represents a decrypted Signal Service data message.
@@ -46,7 +47,8 @@ public class SignalServiceDataMessage {
   private final Optional<GroupCallUpdate>               groupCallUpdate;
   private final Optional <StoryContext>                 storyContext;
   private final Optional<List<BodyRange>>               bodyRanges;
-  private final Optional<CanvasMessage>               canvasMessage;
+  private final Optional<CanvasMessage>                 canvasMessage;
+  private final Optional<ProxyMessage>                  proxyMessage;
 
   /**
    * Construct a SignalServiceDataMessage.
@@ -69,7 +71,7 @@ public class SignalServiceDataMessage {
                            Payment payment,
                            StoryContext storyContext,
                            GiftBadge giftBadge,
-                           List<BodyRange> bodyRanges, CanvasMessage canvasMessage)
+                           List<BodyRange> bodyRanges, CanvasMessage canvasMessage, ProxyMessage proxyMessage)
   {
     this.group = Optional.ofNullable(groupV2);
     this.timestamp        = timestamp;
@@ -87,6 +89,7 @@ public class SignalServiceDataMessage {
     this.remoteDelete     = Optional.ofNullable(remoteDelete);
     this.groupCallUpdate  = Optional.ofNullable(groupCallUpdate);
     this.canvasMessage = Optional.ofNullable(canvasMessage);
+    this.proxyMessage = Optional.ofNullable(proxyMessage);
     if (attachments != null && !attachments.isEmpty()) {
       this.attachments = Optional.of(attachments);
     } else {
@@ -268,6 +271,10 @@ public class SignalServiceDataMessage {
       return this.canvasMessage;
   }
 
+  public Optional<ProxyMessage> getProxyMessage() {
+      return this.proxyMessage;
+  }
+
   public static class Builder {
 
     private List<SignalServiceAttachment> attachments    = new LinkedList<>();
@@ -294,6 +301,7 @@ public class SignalServiceDataMessage {
     private StoryContext storyContext;
     private GiftBadge giftBadge;
     private CanvasMessage canvasMessage;
+    private ProxyMessage proxyMessage;
     private Payment payment;
     private List<BodyRange> bodyRanges = new LinkedList<>();
 
@@ -383,6 +391,11 @@ public class SignalServiceDataMessage {
         return this;
     }
 
+    public Builder withProxyMessage(ProxyMessage m) {
+        this.proxyMessage = m;
+        return this;
+    }
+
     public Builder withSharedContact(SharedContact contact) {
       this.sharedContacts.add(contact);
       return this;
@@ -462,7 +475,7 @@ public class SignalServiceDataMessage {
                                           expiresInSeconds, expireTimerVersion, expirationUpdate, profileKey,
                                           profileKeyUpdate, quote, sharedContacts, previews,
                                           mentions, sticker, viewOnce, reaction, remoteDelete,
-                                          groupCallUpdate, payment, storyContext, giftBadge, bodyRanges, canvasMessage);
+                                          groupCallUpdate, payment, storyContext, giftBadge, bodyRanges, canvasMessage, proxyMessage);
     }
   }
 
