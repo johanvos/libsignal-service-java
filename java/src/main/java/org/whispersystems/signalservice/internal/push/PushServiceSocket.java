@@ -289,6 +289,7 @@ public class PushServiceSocket {
         this.credentialsProvider = credentialsProvider;
         this.signalAgent = signalAgent;
         this.automaticNetworkRetry = automaticNetworkRetry;
+        this.useQuic = configuration.isUseQuic();
         this.serviceClients = createServiceConnectionHolders(configuration.getSignalServiceUrls(), configuration.getSignalProxy());
         this.cdnClientsMap = createCdnClientsMap(configuration.getSignalCdnUrlMap(), configuration.getSignalProxy());
         this.contactDiscoveryClients = createConnectionHolders(configuration.getSignalContactDiscoveryUrls(), configuration.getSignalProxy());
@@ -297,7 +298,7 @@ public class PushServiceSocket {
         this.random = new SecureRandom();
         this.clientZkProfileOperations = clientZkProfileOperations;
         this.useGrpc = Boolean.getBoolean("wave.grpc");
-        LOG.info("do we have grpc? " + System.getProperty("wave.grpc") + ", answer = " + useGrpc);
+        LOG.info("do we have grpc? " + System.getProperty("wave.grpc") + ", answer = " + useGrpc+ " and quic = "+useQuic);
         if (this.useGrpc) {
             String target = "https://grpcproxy2.gluonhq.net";
             String sysTarget = System.getProperty("grpc.target");
@@ -307,7 +308,6 @@ public class PushServiceSocket {
             LOG.info("grpc target for grpcClient = " + target);
             grpcClient = new GrpcClient(target);
         }
-        this.useQuic = configuration.isUseQuic();
     }
 
     public void requestSmsVerificationCode(boolean androidSmsRetriever, Optional<String> captchaToken, Optional<String> challenge) throws IOException {
@@ -2107,7 +2107,12 @@ public class PushServiceSocket {
     }
 
     private NetworkClient createConnectionClient(SignalUrl url, Optional<SignalProxy> proxy) {
-      return NetworkClient.createNetworkClient(url, "FOO", true, useQuic);
+        String proxyHost = null;
+        if (proxy.isPresent()) {
+            SignalProxy p = proxy.get();
+            proxyHost = "http://"+p.getHost()+":"+p.getPort();
+        }
+        return NetworkClient.createNetworkClient(url, "FOO", true, useQuic, proxyHost);
     }
 
     private String getAuthorizationHeader(CredentialsProvider credentialsProvider) {

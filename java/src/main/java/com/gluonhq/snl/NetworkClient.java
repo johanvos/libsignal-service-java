@@ -116,8 +116,7 @@ public abstract class NetworkClient {
 
     public static NetworkClient createNetworkClient(SignalUrl url, Optional<CredentialsProvider> cp, String agent,
             Optional<ConnectivityListener> cl, boolean allowStories, boolean useQuic, String proxy) {
-
-        LOG.info("Creating Networkclient with url " + (url != null ? url.getUrl() : "NULL") + ", using quic? " + useQuic);
+        LOG.info("Creating Networkclient with url " + (url != null ? url.getUrl() : "NULL") + ", using quic? " + useQuic+" and proxy = "+proxy);
         if (useQuic) {
             return new QuicNetworkClient(url, cp, agent, cl, allowStories, proxy);
         } else {
