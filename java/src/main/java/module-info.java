@@ -8,6 +8,7 @@ module org.whispersystems.service {
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
     requires org.signal.libsignal;
+    exports io.privacyresearch.servermodel;
     exports org.signal.storageservice.protos.groups;
     exports org.signal.storageservice.protos.groups.local;
     exports org.whispersystems.signalservice.internal.configuration;

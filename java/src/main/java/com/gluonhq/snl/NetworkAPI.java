@@ -283,7 +283,7 @@ public class NetworkAPI {
             PreKeyResponse answer = new PreKeyResponse(ik, pkris);
             return answer;
         } catch (URISyntaxException | InvalidKeyException ex) {
-            Logger.getLogger(NetworkAPI.class.getName()).log(Level.SEVERE, null, ex);
+            LOG.log(Level.SEVERE, null, ex);
             throw new IOException(ex);
         }
     }

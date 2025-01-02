@@ -176,7 +176,7 @@ public abstract class NetworkClient {
      */
     public void shutdown() {
         this.closed = true;
-
+        implShutdown();
     }
 
     void implShutdown() {

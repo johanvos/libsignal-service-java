@@ -64,7 +64,7 @@ public class LegacyNetworkClient extends NetworkClient {
         wsBuilder.header("X-Signal-Receive-Stories", allowStories ? "true" : "false");
         URI uri = null;
         try {
-            LOG.info("CREATEWS to " + baseUrl);
+            LOG.info("Create ws to " + (baseUrl.contains("pass") ? " authenticated " : baseUrl));
             uri = new URI(baseUrl);
         } catch (URISyntaxException ex) {
             LOG.log(Level.SEVERE, null, ex);
@@ -135,6 +135,7 @@ public class LegacyNetworkClient extends NetworkClient {
     }
 
     void implShutdown() {
+        LOG.info("Shutting down keepalive sender");
         if (this.keepAliveSender != null) {
             this.keepAliveSender.shutdownKeepAlive();
         }
@@ -151,7 +152,8 @@ public class LegacyNetworkClient extends NetworkClient {
                         .setPath("/v1/keepalive")
                         .setVerb("GET")
                         .build()).build();
-        LOG.info("KEEPALIVE: " + message);
+        Log.info("Sending keepalive for "+this);
+        LOG.finest("KEEPALIVE: " + message);
         CompletableFuture fut = CompletableFuture.runAsync(() -> {
             try {
                 sendToStream(message, null);
@@ -187,6 +189,12 @@ public class LegacyNetworkClient extends NetworkClient {
             }
         }
         return implAsyncSendRequest(request.build(), body);
+    }
+
+    @Override
+    public void shutdown() {
+        super.shutdown();
+        this.webSocket.abort();
     }
 
     class MyWebsocketListener implements WebSocket.Listener {
