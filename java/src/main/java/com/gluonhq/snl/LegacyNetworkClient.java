@@ -152,7 +152,7 @@ public class LegacyNetworkClient extends NetworkClient {
                         .setPath("/v1/keepalive")
                         .setVerb("GET")
                         .build()).build();
-        Log.info("Sending keepalive for "+this);
+        LOG.info("Sending keepalive for "+this);
         LOG.finest("KEEPALIVE: " + message);
         CompletableFuture fut = CompletableFuture.runAsync(() -> {
             try {
