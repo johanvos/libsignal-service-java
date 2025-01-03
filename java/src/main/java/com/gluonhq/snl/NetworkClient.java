@@ -84,6 +84,7 @@ public abstract class NetworkClient {
     final Optional<CredentialsProvider> credentialsProvider;
     final Optional<ConnectivityListener> connectivityListener;
     private static final Logger LOG = Logger.getLogger(NetworkClient.class.getName());
+    private final byte[] CLOSING = new byte[]{-1,1,-2,3,-5,8,-13,21};
 
     final BlockingQueue<byte[]> rawByteQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<WebSocketRequestMessage> wsRequestMessageQueue = new LinkedBlockingQueue<>();
@@ -130,7 +131,7 @@ public abstract class NetworkClient {
         this.allowStories = allowStories;
         this.credentialsProvider = cp;
         this.connectivityListener = connectivityListener;
-        LOG.info("Created NetworkClient with URL " + url + ", cp = " + cp + " and cl = "
+        LOG.info("Created NetworkClient " + this+" with URL " + url + ", cp = " + cp + " and cl = "
                 + connectivityListener);
         this.formatProcessingThread = new Thread() {
             @Override
@@ -175,8 +176,15 @@ public abstract class NetworkClient {
      * Close this networkclient and release all resources.
      */
     public void shutdown() {
+        LOG.info("Shutting down networkclient "+this);
         this.closed = true;
         implShutdown();
+        try {
+            this.rawByteQueue.put(CLOSING);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(NetworkClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        LOG.info("Shutting down networkclient done for "+this);
     }
 
     void implShutdown() {
@@ -428,17 +436,21 @@ public abstract class NetworkClient {
             try {
                 LOG.info("Wait for raw bytes");
                 byte[] raw = rawByteQueue.take();
+                if (Arrays.equals(raw, CLOSING)) {
+                    LOG.info("FormattingThread received closing bytes, stop loop");
+                    continue;
+                }
                 LOG.finest("Got raw bytes: " + Arrays.toString(raw));
                 WebSocketMessage message = WebSocketMessage.parseFrom(raw);
-                LOG.info("Got message, type = " + message.getType());
+                LOG.fine("Got message, type = " + message.getType());
                 if (message.getType() == WebSocketMessage.Type.REQUEST) {
                     LOG.info("Add request message to queue");
                     wsRequestMessageQueue.put(message.getRequest());
                     int queueSize = wsRequestMessageQueue.size();
-                    LOG.info("IncomingQueue size after put = "+queueSize);
+                    LOG.fine("IncomingQueue size after put = "+queueSize);
                 } else if (message.getType() == WebSocketMessage.Type.RESPONSE) {
                     OutgoingRequest listener = outgoingRequests.get(message.getResponse().getId());
-                    LOG.info("incoming message is response for request with id " + message.getResponse().getId() + " and listener = " + listener);
+                    LOG.fine("incoming message is response for request with id " + message.getResponse().getId() + " and listener = " + listener);
                     if (listener != null) {
                         listener.getResponseFuture().set(
                                 new WebsocketResponse(message.getResponse().getStatus(),
@@ -450,8 +462,8 @@ public abstract class NetworkClient {
             } catch (Throwable t) {
                 t.printStackTrace();
             }
-
         }
+        LOG.info("NetworkClient " + this+" is closed, formatting thread will stop.");
     }
 
     HttpResponse.BodyHandler createBodyHandler(final HttpRequest request) {
