@@ -58,10 +58,14 @@ public class LegacyNetworkClient extends NetworkClient {
     }
 
     @Override
-    void implCreateWebSocket(String baseUrl) throws IOException {
+    void implCreateWebSocket(String baseUrl, String auth) throws IOException {
         WebSocket.Builder wsBuilder = this.httpClient.newWebSocketBuilder();
         wsBuilder.header("X-Signal-Agent", signalAgent);
         wsBuilder.header("X-Signal-Receive-Stories", allowStories ? "true" : "false");
+        if (auth != null) {
+            LOG.info("use authorization header");
+            wsBuilder.header("Authorization", auth);
+        }
         URI uri = null;
         try {
             LOG.info("Create ws to " + (baseUrl.contains("pass") ? " authenticated " : baseUrl));

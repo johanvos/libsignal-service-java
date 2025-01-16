@@ -155,13 +155,19 @@ public abstract class NetworkClient {
         if (!baseUrl.endsWith("provisioning/")) {
             baseUrl = baseUrl + "/v1/websocket/";
         }
+        String auth = null;
         if (this.credentialsProvider.isPresent()) {
             CredentialsProvider cp = this.credentialsProvider.get();
             String identifier = cp.getAci() != null ? cp.getDeviceUuid() : cp.getE164();
             baseUrl = baseUrl + "?login=" + identifier + "&password=" + cp.getPassword();
+            auth = "Basic " + Base64.encodeBytes((identifier + ":" + cp.getPassword()).getBytes("UTF-8"));
         }
-        implCreateWebSocket(baseUrl);
+        implCreateWebSocket(baseUrl, auth);
         websocketCreated = true;
+    }
+
+    void implCreateWebSocket(String baseurl, String auth) throws IOException {
+        throw new UnsupportedOperationException();
     }
 
     void implCreateWebSocket(String baseurl) throws IOException {
