@@ -7,7 +7,7 @@
 package org.whispersystems.signalservice.internal.push;
 
 
-import org.whispersystems.libsignal.logging.Log;
+import org.signal.libsignal.protocol.logging.Log;
 
 public class PushTransportDetails {
 
@@ -15,6 +15,10 @@ public class PushTransportDetails {
 
   private final int messageVersion;
 
+  public PushTransportDetails() {
+    this.messageVersion = 3;
+  }
+  
   public PushTransportDetails(int messageVersion) {
     this.messageVersion = messageVersion;
   }
