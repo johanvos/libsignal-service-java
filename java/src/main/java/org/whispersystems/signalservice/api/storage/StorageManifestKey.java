@@ -9,30 +9,33 @@ import java.util.Arrays;
  */
 public final class StorageManifestKey implements StorageCipherKey {
 
-  private static final int LENGTH = 32;
+    private static final int LENGTH = 32;
 
-  private final byte[] key;
+    private final byte[] key;
 
-  StorageManifestKey(byte[] key) {
-    if (key.length != LENGTH) throw new AssertionError();
+    StorageManifestKey(byte[] key) {
+        if (key.length != LENGTH) {
+            throw new AssertionError();
+        }
 
-    this.key = key;
-  }
+        this.key = key;
+    }
 
-  @Override
-  public byte[] serialize() {
-    return key.clone();
-  }
+    @Override
+    public byte[] serialize() {
+        return key.clone();
+    }
 
-  @Override
-  public boolean equals(Object o) {
-    if (o == null || o.getClass() != getClass()) return false;
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || o.getClass() != getClass()) {
+            return false;
+        }
+        return Arrays.equals(((StorageManifestKey) o).key, key);
+    }
 
-    return Arrays.equals(((StorageManifestKey) o).key, key);
-  }
-
-  @Override
-  public int hashCode() {
-    return Arrays.hashCode(key);
-  }
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(key);
+    }
 }

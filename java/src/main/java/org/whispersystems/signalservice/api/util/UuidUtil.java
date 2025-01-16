@@ -46,7 +46,6 @@ public final class UuidUtil {
     ByteBuffer buffer = ByteBuffer.wrap(new byte[16]);
     buffer.putLong(uuid.getMostSignificantBits());
     buffer.putLong(uuid.getLeastSignificantBits());
-
     return buffer.array();
   }
 
